@@ -4,18 +4,29 @@
     <div class="rounded-2xl bg-white shadow-sm overflow-hidden border border-slate-200/60">
         <div class="h-2.5 bg-linear-to-r from-indigo-500 via-violet-500 to-purple-600"></div>
         <div class="p-6 sm:p-8">
+            <div class="flex items-center gap-3 mb-3">
+                @if ($release->releaseSet)
+                    <a href="{{ $this->backUrl() }}"
+                        class="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition shrink-0">
+                        <svg class="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/>
+                        </svg>
+                    </a>
+                    <p class="text-xs text-slate-400 font-medium truncate">{{ $release->releaseSet->name }}</p>
+                @endif
+            </div>
             <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight tracking-tight">
                 {{ $release->form->title ?? $release->name }}
             </h1>
             @if ($release->form->description ?? null)
                 <p class="mt-3 text-sm text-slate-500 leading-relaxed">{{ $release->form->description }}</p>
             @endif
-            @if ($release->end_at)
+            @if ($release->releaseSet?->end_at)
                 <span class="mt-4 inline-flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-1.5 border border-slate-200">
                     <svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    Closes {{ $release->end_at->format('d M Y, H:i') }}
+                    Closes {{ $release->releaseSet->end_at->format('d M Y, H:i') }}
                 </span>
             @endif
         </div>
@@ -184,7 +195,7 @@
                                         <label
                                             class="flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-3.5 cursor-pointer
                                                    hover:border-indigo-300 hover:bg-indigo-50/40 transition-colors duration-100
-                                                   has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50"
+                                                   has-checked:border-indigo-500 has-checked:bg-indigo-50"
                                         >
                                             <input
                                                 type="radio"
@@ -196,6 +207,21 @@
                                             <span class="text-sm text-slate-800">{{ $option->label }}</span>
                                         </label>
                                     @endforeach
+                                    @if ($this->isOtherSelected($question))
+                                        <div class="pl-1 pt-1">
+                                            <input
+                                                type="text"
+                                                wire:model.live="otherText.{{ $question->id }}"
+                                                placeholder="Please specify…"
+                                                class="block w-full rounded-xl border border-indigo-300 bg-indigo-50/30 px-4 py-2.5 text-sm text-slate-800
+                                                       placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition
+                                                       @error("otherText.{$question->id}") border-red-400 @enderror"
+                                            >
+                                            @error("otherText.{$question->id}")
+                                                <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+                                    @endif
                                 </div>
 
                             {{-- ---- checkbox ---- --}}
@@ -205,7 +231,7 @@
                                         <label
                                             class="flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-3.5 cursor-pointer
                                                    hover:border-indigo-300 hover:bg-indigo-50/40 transition-colors duration-100
-                                                   has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50"
+                                                   has-checked:border-indigo-500 has-checked:bg-indigo-50"
                                         >
                                             <input
                                                 type="checkbox"
@@ -216,28 +242,58 @@
                                             <span class="text-sm text-slate-800">{{ $option->label }}</span>
                                         </label>
                                     @endforeach
+                                    @if ($this->isOtherSelected($question))
+                                        <div class="pl-1 pt-1">
+                                            <input
+                                                type="text"
+                                                wire:model.live="otherText.{{ $question->id }}"
+                                                placeholder="Please specify…"
+                                                class="block w-full rounded-xl border border-indigo-300 bg-indigo-50/30 px-4 py-2.5 text-sm text-slate-800
+                                                       placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition
+                                                       @error("otherText.{$question->id}") border-red-400 @enderror"
+                                            >
+                                            @error("otherText.{$question->id}")
+                                                <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+                                    @endif
                                 </div>
 
                             {{-- ---- select ---- --}}
                             @elseif ($question->type === 'select')
-                                <div class="relative">
-                                    <select
-                                        id="field-{{ $question->id }}"
-                                        wire:model.live="answers.{{ $question->id }}"
-                                        class="block w-full rounded-xl border border-slate-300 bg-white pl-4 pr-10 py-3 text-sm text-slate-900
-                                               shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none appearance-none
-                                               @error("answers.{$question->id}") border-red-400 @enderror"
-                                    >
-                                        <option value="">-- Choose an option --</option>
-                                        @foreach ($question->options as $option)
-                                            <option value="{{ $option->value }}">{{ $option->label }}</option>
-                                        @endforeach
-                                    </select>
-                                    <div class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none">
-                                        <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                                        </svg>
+                                <div class="space-y-2">
+                                    <div class="relative">
+                                        <select
+                                            id="field-{{ $question->id }}"
+                                            wire:model.live="answers.{{ $question->id }}"
+                                            class="block w-full rounded-xl border border-slate-300 bg-white pl-4 pr-10 py-3 text-sm text-slate-900
+                                                   shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none appearance-none
+                                                   @error("answers.{$question->id}") border-red-400 @enderror"
+                                        >
+                                            <option value="">-- Choose an option --</option>
+                                            @foreach ($question->options as $option)
+                                                <option value="{{ $option->value }}">{{ $option->label }}</option>
+                                            @endforeach
+                                        </select>
+                                        <div class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none">
+                                            <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                                            </svg>
+                                        </div>
                                     </div>
+                                    @if ($this->isOtherSelected($question))
+                                        <input
+                                            type="text"
+                                            wire:model.live="otherText.{{ $question->id }}"
+                                            placeholder="Please specify…"
+                                            class="block w-full rounded-xl border border-indigo-300 bg-indigo-50/30 px-4 py-2.5 text-sm text-slate-800
+                                                   placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition
+                                                   @error("otherText.{$question->id}") border-red-400 @enderror"
+                                        >
+                                        @error("otherText.{$question->id}")
+                                            <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
+                                        @enderror
+                                    @endif
                                 </div>
 
                             {{-- ---- file ---- --}}

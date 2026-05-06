@@ -26,12 +26,14 @@ class ListReleaseSubmissions extends Page implements HasTable
 
     public function mount(int|string $release): void
     {
-        $this->record = FormRelease::with('form')->findOrFail($release);
+        $this->record = FormRelease::with(['form', 'releaseSet'])->findOrFail($release);
     }
 
     public function getTitle(): string
     {
-        return 'Submissions — ' . $this->record->name;
+        $setName  = $this->record->releaseSet?->name ?? 'Release #' . $this->record->id;
+        $formName = $this->record->form?->title ?? 'Form';
+        return "Submissions — {$setName} / {$formName}";
     }
 
     public function table(Table $table): Table

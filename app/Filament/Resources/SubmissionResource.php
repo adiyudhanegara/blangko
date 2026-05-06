@@ -38,8 +38,13 @@ class SubmissionResource extends Resource
                     ->sortable()
                     ->default('—'),
 
-                Tables\Columns\TextColumn::make('formRelease.name')
-                    ->label('Release')
+                Tables\Columns\TextColumn::make('formRelease.releaseSet.name')
+                    ->label('Release Set')
+                    ->searchable()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('formRelease.form.title')
+                    ->label('Form')
                     ->searchable()
                     ->sortable(),
 
@@ -74,10 +79,13 @@ class SubmissionResource extends Resource
                     ->options(['draft' => 'Draft', 'submitted' => 'Submitted']),
 
                 Tables\Filters\SelectFilter::make('form_release_id')
-                    ->label('Release')
-                    ->relationship('formRelease', 'name')
-                    ->searchable()
-                    ->preload(),
+                    ->label('Form')
+                    ->options(fn () => \App\Models\FormRelease::with('form')
+                        ->get()
+                        ->mapWithKeys(fn ($r) => [$r->id => $r->form?->title ?? "Release #{$r->id}"])
+                        ->toArray()
+                    )
+                    ->searchable(),
 
                 Tables\Filters\SelectFilter::make('division')
                     ->label('Division')

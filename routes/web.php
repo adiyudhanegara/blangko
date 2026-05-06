@@ -9,9 +9,24 @@ Route::get('/', fn () => redirect('/admin'));
 Route::middleware(['auth'])->group(function () {
     Route::get('/admin/releases/{release}/export', [AdminExportController::class, 'export'])
         ->name('admin.releases.export');
+    Route::get('/admin/release-sets/{releaseSet}/export', [AdminExportController::class, 'exportReleaseSet'])
+        ->name('admin.release-sets.export');
 });
 
 Route::prefix('r')->name('release.')->group(function () {
+    // Entry point — shows identify/register form, or redirects to forms list if already identified
     Route::get('/{token}', [PublicReleaseController::class, 'show'])->name('show');
-    Route::get('/{token}/form', [PublicReleaseController::class, 'form'])->name('form');
+
+    // Release-set forms list (after identification)
+    Route::get('/{token}/forms', [PublicReleaseController::class, 'forms'])->name('forms');
+
+    // Open a specific form release — creates / finds the submission and shows the form
+    Route::get('/{token}/form/{releaseId}', [PublicReleaseController::class, 'form'])->name('form');
+
+    // Edit a specific existing submission (multi-submission or single resume)
+    Route::get('/{token}/form/{releaseId}/submission/{submissionId}', [PublicReleaseController::class, 'submissionEdit'])
+        ->name('submission.edit');
+
+    // Submission history for multi-submission forms
+    Route::get('/{token}/form/{releaseId}/history', [PublicReleaseController::class, 'history'])->name('history');
 });

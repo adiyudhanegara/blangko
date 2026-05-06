@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class QuestionOption extends Model
 {
-    protected $fillable = ['question_id', 'label', 'value', 'order'];
+    protected $fillable = ['question_id', 'label', 'value', 'order', 'is_other'];
+
+    protected $casts = ['is_other' => 'boolean'];
 
     public function question(): BelongsTo
     {

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Form extends Model
@@ -13,11 +14,16 @@ class Form extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'title', 'description', 'language', 'status', 'allow_edit_after_submit', 'created_by',
+        'title', 'description', 'language', 'status',
+        'allow_edit_after_submit', 'allow_multiple_submissions',
+        'allow_duplicate_from_previous', 'preview_question_ids', 'created_by',
     ];
 
     protected $casts = [
-        'allow_edit_after_submit' => 'boolean',
+        'allow_edit_after_submit'       => 'boolean',
+        'allow_multiple_submissions'    => 'boolean',
+        'allow_duplicate_from_previous' => 'boolean',
+        'preview_question_ids'          => 'array',
     ];
 
     public function creator(): BelongsTo
@@ -38,5 +44,28 @@ class Form extends Model
     public function releases(): HasMany
     {
         return $this->hasMany(FormRelease::class);
+    }
+
+    public function exportTemplate(): HasOne
+    {
+        return $this->hasOne(FormExportTemplate::class);
+    }
+
+    /**
+     * Returns the questions to show as preview columns on the submission history page.
+     * Falls back to the first 3 non-file, non-textarea questions.
+     */
+    public function previewQuestions(): \Illuminate\Database\Eloquent\Collection
+    {
+        if (!empty($this->preview_question_ids)) {
+            return $this->questions()->whereIn('id', $this->preview_question_ids)->get()
+                ->sortBy(fn($q) => array_search($q->id, $this->preview_question_ids))
+                ->values();
+        }
+
+        return $this->questions()
+            ->whereNotIn('type', ['file', 'textarea'])
+            ->limit(3)
+            ->get();
     }
 }

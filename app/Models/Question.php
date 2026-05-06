@@ -11,11 +11,13 @@ class Question extends Model
     protected $fillable = [
         'form_id', 'type', 'label', 'help_text', 'is_required', 'order',
         'validation_rules', 'conditional_parent_id', 'conditional_value',
+        'allow_duplicate_in_new_submission',
     ];
 
     protected $casts = [
-        'is_required' => 'boolean',
-        'validation_rules' => 'array',
+        'is_required'                       => 'boolean',
+        'validation_rules'                  => 'array',
+        'allow_duplicate_in_new_submission' => 'boolean',
     ];
 
     public function form(): BelongsTo

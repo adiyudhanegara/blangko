@@ -4,7 +4,6 @@ namespace App\Livewire\Public;
 
 use App\Models\Answer;
 use App\Models\FormRelease;
-use App\Models\Participant;
 use App\Models\ReleaseQuestion;
 use App\Models\Submission;
 use App\Services\ConditionalLogicEvaluator;
@@ -16,67 +15,76 @@ class SubmissionForm extends Component
     use WithFileUploads;
 
     public FormRelease $release;
-    public Submission $submission;
+    public Submission  $submission;
 
-    public array $answers = [];
+    public array $answers     = [];
+    public array $otherText   = []; // free-text for "Other" option per question
     public array $fileUploads = [];
 
     public bool $submitted = false;
 
-    public function mount(): void
+    public function mount(Submission $submission): void
     {
-        // Materialise a pending (session-only) new participant now that they've
-        // actually reached the form — only at this point do we write to the DB.
-        if (session('blangko_pending_participant') && session('blangko_release_id') == $this->release->id) {
-            $participant = Participant::create(session('blangko_pending_participant'));
-            session()->forget('blangko_pending_participant');
-            session()->forget('blangko_release_id');
+        $this->submission = $submission;
 
-            $submission = Submission::create([
-                'form_release_id' => $this->release->id,
-                'participant_id'  => $participant->id,
-                'status'          => 'draft',
-                'ip_address'      => request()->ip(),
-                'user_agent'      => request()->userAgent(),
-            ]);
-
-            session([
-                'blangko_participant_id' => $participant->id,
-                'blangko_submission_id'  => $submission->id,
-            ]);
-        }
-
+        // Redirect if participant session doesn't match
         $participantId = session('blangko_participant_id');
-        $submissionId  = session('blangko_submission_id');
+        $releaseSetId  = session('blangko_release_set_id');
 
-        if (!$participantId || !$submissionId) {
-            $this->redirectRoute('release.show', $this->release->public_token);
+        if (!$participantId
+            || $this->submission->participant_id != $participantId
+            || $this->release->releaseSet?->id != $releaseSetId
+        ) {
+            $this->redirectRoute('release.show', $this->release->releaseSet?->public_token ?? '');
             return;
         }
-
-        $this->submission = Submission::where('id', $submissionId)
-            ->where('participant_id', $participantId)
-            ->where('form_release_id', $this->release->id)
-            ->firstOrFail();
 
         if ($this->submission->status === 'submitted') {
             $this->submitted = true;
         }
 
-        // Pre-initialize checkbox questions as empty arrays so Livewire knows the type
+        // Pre-initialize checkbox questions as empty arrays
         foreach ($this->release->releaseQuestions as $question) {
             if ($question->type === 'checkbox') {
                 $this->answers[$question->id] = [];
             }
         }
 
-        // Load existing answers (overwrites the defaults above if a saved answer exists)
+        // Load existing answers
         foreach ($this->submission->answers as $answer) {
-            if ($answer->value_json !== null) {
-                $this->answers[$answer->release_question_id] = $answer->value_json;
-            } else {
-                $this->answers[$answer->release_question_id] = $answer->value;
+            $this->loadAnswer($answer);
+        }
+    }
+
+    protected function loadAnswer(Answer $answer): void
+    {
+        $qid = $answer->release_question_id;
+
+        if ($answer->value_json !== null) {
+            $json = $answer->value_json;
+
+            // Radio/select with Other: {"option": "...", "other_text": "..."}
+            if (isset($json['option'])) {
+                $this->answers[$qid] = $json['option'];
+                if (isset($json['other_text'])) {
+                    $this->otherText[$qid] = $json['other_text'];
+                }
+                return;
             }
+
+            // Checkbox with optional Other: {"values": [...], "other_text": "..."}
+            if (isset($json['values'])) {
+                $this->answers[$qid] = $json['values'];
+                if (isset($json['other_text'])) {
+                    $this->otherText[$qid] = $json['other_text'];
+                }
+                return;
+            }
+
+            // Plain array (legacy checkbox)
+            $this->answers[$qid] = $json;
+        } else {
+            $this->answers[$qid] = $answer->value;
         }
     }
 
@@ -109,7 +117,7 @@ class SubmissionForm extends Component
 
     protected function validateAnswers(): void
     {
-        $rules = [];
+        $rules    = [];
         $messages = [];
 
         foreach ($this->release->releaseQuestions as $question) {
@@ -117,7 +125,7 @@ class SubmissionForm extends Component
                 continue;
             }
 
-            $key = "answers.{$question->id}";
+            $key       = "answers.{$question->id}";
             $ruleParts = [];
 
             if ($question->is_required) {
@@ -133,7 +141,6 @@ class SubmissionForm extends Component
                 $ruleParts[] = 'numeric';
             }
             if ($question->type === 'checkbox') {
-                // Ensure the value is an array before validation so a null/missing answer doesn't fail
                 if (!is_array($this->answers[$question->id] ?? null)) {
                     $this->answers[$question->id] = [];
                 }
@@ -149,12 +156,30 @@ class SubmissionForm extends Component
             }
 
             if (!empty($ruleParts)) {
-                $rules[$key] = implode('|', $ruleParts);
+                $rules[$key]              = implode('|', $ruleParts);
                 $messages["{$key}.required"] = "{$question->label} is required.";
+            }
+
+            // Validate "Other" free text when the Other option is selected and required
+            if ($question->is_required && $this->isOtherSelected($question)) {
+                $otherKey            = "otherText.{$question->id}";
+                $rules[$otherKey]    = 'required|string|max:500';
+                $messages["{$otherKey}.required"] = "{$question->label}: please specify the \"Other\" value.";
             }
         }
 
         $this->validate($rules, $messages);
+    }
+
+    protected function isOtherSelected(ReleaseQuestion $question): bool
+    {
+        $value = $this->answers[$question->id] ?? null;
+
+        if ($question->type === 'checkbox') {
+            return is_array($value) && in_array('other', $value, true);
+        }
+
+        return $value === 'other';
     }
 
     protected function saveAnswers(): void
@@ -163,30 +188,85 @@ class SubmissionForm extends Component
             $value = $this->answers[$question->id] ?? null;
 
             if ($question->type === 'file') {
-                $upload = $this->fileUploads[$question->id] ?? null;
-                if ($upload) {
-                    $path = $upload->store("submissions/{$this->submission->id}", 'local');
-
-                    Answer::updateOrCreate(
-                        ['submission_id' => $this->submission->id, 'release_question_id' => $question->id],
-                        ['file_path' => $path, 'file_original_name' => $upload->getClientOriginalName()],
-                    );
-                }
+                $this->saveFileAnswer($question);
                 continue;
             }
 
             if ($question->type === 'checkbox') {
+                $values = is_array($value) ? $value : [];
+                $json   = ['values' => $values];
+
+                if (in_array('other', $values, true) && !empty($this->otherText[$question->id])) {
+                    $json['other_text'] = $this->otherText[$question->id];
+                }
+
                 Answer::updateOrCreate(
                     ['submission_id' => $this->submission->id, 'release_question_id' => $question->id],
-                    ['value' => null, 'value_json' => is_array($value) ? $value : []],
+                    ['value' => null, 'value_json' => $json]
                 );
-            } else {
-                Answer::updateOrCreate(
-                    ['submission_id' => $this->submission->id, 'release_question_id' => $question->id],
-                    ['value' => (string) ($value ?? ''), 'value_json' => null],
-                );
+                continue;
             }
+
+            // Radio / select with potential Other option
+            if (in_array($question->type, ['radio', 'select']) && $value === 'other') {
+                $json = [
+                    'option'     => 'other',
+                    'other_text' => $this->otherText[$question->id] ?? '',
+                ];
+                Answer::updateOrCreate(
+                    ['submission_id' => $this->submission->id, 'release_question_id' => $question->id],
+                    ['value' => null, 'value_json' => $json]
+                );
+                continue;
+            }
+
+            Answer::updateOrCreate(
+                ['submission_id' => $this->submission->id, 'release_question_id' => $question->id],
+                ['value' => (string) ($value ?? ''), 'value_json' => null]
+            );
         }
+    }
+
+    protected function saveFileAnswer(ReleaseQuestion $question): void
+    {
+        $upload = $this->fileUploads[$question->id] ?? null;
+        if (!$upload) {
+            return;
+        }
+
+        $maxFiles = (int) ($question->validation_rules['max_files'] ?? 1);
+
+        if ($maxFiles <= 1 || !is_array($upload)) {
+            // Single file upload (legacy behaviour)
+            $file = is_array($upload) ? $upload[0] : $upload;
+            $path = $file->store("submissions/{$this->submission->id}", 'local');
+            Answer::updateOrCreate(
+                ['submission_id' => $this->submission->id, 'release_question_id' => $question->id],
+                [
+                    'file_path'          => $path,
+                    'file_original_name' => $file->getClientOriginalName(),
+                    'file_paths'         => null,
+                ]
+            );
+            return;
+        }
+
+        // Multiple file uploads
+        $filePaths = [];
+        foreach ((array) $upload as $file) {
+            $path        = $file->store("submissions/{$this->submission->id}", 'local');
+            $filePaths[] = [
+                'path'          => $path,
+                'original_name' => $file->getClientOriginalName(),
+                'size'          => $file->getSize(),
+                'mime'          => $file->getMimeType(),
+            ];
+        }
+
+        Answer::updateOrCreate(
+            ['submission_id' => $this->submission->id, 'release_question_id' => $question->id],
+            ['file_path' => null, 'file_original_name' => null, 'file_paths' => $filePaths]
+        );
     }
 
     public function canEdit(): bool
@@ -200,6 +280,17 @@ class SubmissionForm extends Component
             return;
         }
         $this->submitted = false;
+    }
+
+    public function backUrl(): string
+    {
+        $token = $this->release->releaseSet?->public_token ?? '';
+
+        if ($this->release->allowsMultipleSubmissions()) {
+            return route('release.history', [$token, $this->release->id]);
+        }
+
+        return route('release.forms', $token);
     }
 
     public function render()

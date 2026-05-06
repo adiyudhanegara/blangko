@@ -49,12 +49,12 @@
                                 This form is not accepting responses yet.<br>Please check back at the opening time.
                             </p>
                         </div>
-                        @if ($release->start_at)
+                        @if ($releaseSet->start_at)
                             <div class="inline-flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm font-medium text-amber-800">
                                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 9v7.5" />
                                 </svg>
-                                Opens {{ $release->start_at->format('d M Y \a\t H:i') }}
+                                Opens {{ $releaseSet->start_at->format('d M Y \a\t H:i') }}
                             </div>
                         @endif
                     </div>
@@ -68,24 +68,24 @@
                             </svg>
                         </div>
                         <div>
-                            @if ($release->status === 'cancelled')
-                                <h1 class="text-xl font-bold text-slate-900">Form Cancelled</h1>
+                            @if ($releaseSet->status === 'cancelled')
+                                <h1 class="text-xl font-bold text-slate-900">Closed</h1>
                                 <p class="mt-2 text-sm text-slate-500 leading-relaxed">
-                                    This form has been cancelled and is no longer accepting responses.
+                                    This submission period has been cancelled and is no longer accepting responses.
                                 </p>
                             @else
-                                <h1 class="text-xl font-bold text-slate-900">Form Closed</h1>
+                                <h1 class="text-xl font-bold text-slate-900">Submission Closed</h1>
                                 <p class="mt-2 text-sm text-slate-500 leading-relaxed">
-                                    This form has closed and is no longer accepting new responses.
+                                    This submission period has closed and is no longer accepting new responses.
                                 </p>
                             @endif
                         </div>
-                        @if ($release->end_at)
+                        @if ($releaseSet->end_at)
                             <div class="inline-flex items-center gap-2 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm font-medium text-red-800">
                                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 9v7.5" />
                                 </svg>
-                                Closed {{ $release->end_at->format('d M Y \a\t H:i') }}
+                                Closed {{ $releaseSet->end_at->format('d M Y \a\t H:i') }}
                             </div>
                         @endif
                     </div>
@@ -93,12 +93,10 @@
 
             </div>
 
-            {{-- Form context pill --}}
+            {{-- Release Set context pill --}}
             <div class="rounded-xl bg-white border border-slate-200/60 shadow-sm px-5 py-4">
-                <p class="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1.5">Form</p>
-                <p class="text-sm font-semibold text-slate-800">
-                    {{ $release->form->title ?? $release->name }}
-                </p>
+                <p class="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1.5">Submission Period</p>
+                <p class="text-sm font-semibold text-slate-800">{{ $releaseSet->name }}</p>
             </div>
 
         </div>

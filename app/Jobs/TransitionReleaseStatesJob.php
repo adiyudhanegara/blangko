@@ -1,8 +1,8 @@
 <?php
 namespace App\Jobs;
 
-use App\Models\FormRelease;
-use App\Services\ReleasePublisher;
+use App\Models\ReleaseSet;
+use App\Services\ReleaseSetPublisher;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -15,19 +15,19 @@ class TransitionReleaseStatesJob implements ShouldQueue
 
     public function handle(): void
     {
-        // scheduled -> open
-        FormRelease::where('status', 'scheduled')
+        // scheduled -> open (when start_at has passed)
+        ReleaseSet::where('status', 'scheduled')
             ->where('start_at', '<=', now())
-            ->each(function (FormRelease $release) {
+            ->each(function (ReleaseSet $set) {
                 try {
-                    ReleasePublisher::publish($release);
+                    ReleaseSetPublisher::publish($set);
                 } catch (\Throwable $e) {
-                    \Log::error("Failed to publish release #{$release->id}: " . $e->getMessage());
+                    \Log::error("Failed to publish release set #{$set->id}: " . $e->getMessage());
                 }
             });
 
-        // open -> closed
-        FormRelease::where('status', 'open')
+        // open -> closed (when end_at has passed)
+        ReleaseSet::where('status', 'open')
             ->where('end_at', '<=', now())
             ->update(['status' => 'closed']);
     }

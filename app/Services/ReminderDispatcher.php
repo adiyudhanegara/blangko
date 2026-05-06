@@ -2,51 +2,44 @@
 namespace App\Services;
 
 use App\Jobs\SendReminderJob;
-use App\Models\FormRelease;
 use App\Models\Participant;
+use App\Models\ReleaseSet;
 use App\Models\ReminderLog;
 use Carbon\Carbon;
 
 class ReminderDispatcher
 {
-    public function dispatch(FormRelease $release): void
+    public function dispatch(ReleaseSet $set): void
     {
-        if ($release->status !== 'open') return;
-        if (empty($release->reminder_schedule)) return;
+        if (!$set->isOpen()) return;
+        if (empty($set->reminder_schedule)) return;
 
-        $daysRemaining = (int) now()->diffInDays($release->end_at, false);
+        $daysRemaining = (int) now()->diffInDays($set->end_at, false);
 
-        if (!in_array($daysRemaining, $release->reminder_schedule)) return;
+        if (!in_array($daysRemaining, $set->reminder_schedule)) return;
 
-        // Get all participants in the release's divisions
-        $participantIds = $release->divisions()
-            ->with('participants')
-            ->get()
-            ->flatMap(fn ($d) => $d->participants->pluck('id'))
-            ->unique();
+        // Participants in the set's divisions (or all participants if no division restriction)
+        $divisionIds = $set->divisions()->pluck('divisions.id');
 
-        // Get participants who have already submitted
-        $submittedIds = $release->submissions()
-            ->where('status', 'submitted')
-            ->pluck('participant_id');
+        $participantQuery = Participant::whereNotNull('email')->where('status', 'active');
+        if ($divisionIds->isNotEmpty()) {
+            $participantQuery->whereIn('division_id', $divisionIds);
+        }
 
-        // Non-submitters
-        $pending = Participant::whereIn('id', $participantIds)
-            ->whereNotIn('id', $submittedIds)
-            ->whereNotNull('email')
-            ->where('status', 'active')
-            ->get();
+        $calculator = app(CompletionCalculator::class);
 
-        foreach ($pending as $participant) {
-            // Guard: already sent this (release, participant, day offset)
-            $alreadySent = ReminderLog::where('form_release_id', $release->id)
+        foreach ($participantQuery->cursor() as $participant) {
+            if ($calculator->isComplete($set, $participant)) continue;
+
+            // Guard: already sent for this (set, participant, day offset)
+            $alreadySent = ReminderLog::where('release_set_id', $set->id)
                 ->where('participant_id', $participant->id)
-                ->whereDate('sent_at', Carbon::today())
+                ->where('reminder_offset_days', $daysRemaining)
                 ->exists();
 
             if ($alreadySent) continue;
 
-            SendReminderJob::dispatch($release, $participant);
+            SendReminderJob::dispatch($set, $participant);
         }
     }
 }

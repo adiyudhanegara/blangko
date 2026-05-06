@@ -1,7 +1,7 @@
 <x-filament-panels::page>
 @php
     $record = $this->getRecord();
-    $record->load(['participant.division', 'formRelease.form']);
+    $record->load(['participant.division', 'formRelease.form', 'formRelease.releaseSet']);
     $questions  = $this->questions;
     $answerMap  = $this->answerMap;
 
@@ -237,16 +237,16 @@
                     <span class="sv-rvalue">{{ $record->formRelease->form->title }}</span>
                 </div>
                 <div class="sv-release-item">
-                    <span class="sv-rlabel">Release</span>
-                    <span class="sv-rvalue sv-rvalue--muted">{{ $record->formRelease->name }}</span>
+                    <span class="sv-rlabel">Release Set</span>
+                    <span class="sv-rvalue sv-rvalue--muted">{{ $record->formRelease->releaseSet?->name ?? '—' }}</span>
                 </div>
-                @if ($record->formRelease->start_at || $record->formRelease->end_at)
+                @if ($record->formRelease->releaseSet?->start_at || $record->formRelease->releaseSet?->end_at)
                     <div class="sv-release-item">
                         <span class="sv-rlabel">Period</span>
                         <span class="sv-rvalue sv-rvalue--muted">
-                            {{ $record->formRelease->start_at?->format('d M Y') ?? '?' }}
+                            {{ $record->formRelease->releaseSet?->start_at?->format('d M Y') ?? '?' }}
                             –
-                            {{ $record->formRelease->end_at?->format('d M Y') ?? '?' }}
+                            {{ $record->formRelease->releaseSet?->end_at?->format('d M Y') ?? '?' }}
                         </span>
                     </div>
                 @endif
@@ -332,24 +332,48 @@
                             @endif
 
                         @elseif ($question->type === 'checkbox')
-                            @php $vals = $answer->value_json ?? []; @endphp
-                            @if (empty($vals))
+                            @php
+                                $json      = $answer->value_json;
+                                // V2: {"values":[...],"other_text":"..."} — V1: plain array
+                                $vals      = is_array($json) ? ($json['values'] ?? $json) : [];
+                                $otherText = is_array($json) ? ($json['other_text'] ?? null) : null;
+                            @endphp
+                            @if (empty($vals) && !$otherText)
                                 <span class="sv-no-answer">No options selected</span>
                             @else
                                 <div class="sv-pills-wrap">
                                     @foreach ($vals as $v)
+                                        @if ($v !== 'other')
+                                            <span class="sv-pill sv-pill--indigo">
+                                                <svg fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                                                {{ $v }}
+                                            </span>
+                                        @endif
+                                    @endforeach
+                                    @if ($otherText)
                                         <span class="sv-pill sv-pill--indigo">
                                             <svg fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
-                                            {{ $v }}
+                                            Other: {{ $otherText }}
                                         </span>
-                                    @endforeach
+                                    @endif
                                 </div>
                             @endif
 
                         @elseif ($question->type === 'radio' || $question->type === 'select')
+                            @php
+                                $json = $answer->value_json;
+                                // V2 Other: {"option":"other","other_text":"..."}
+                                if (is_array($json) && isset($json['option'])) {
+                                    $displayVal = $json['option'] === 'other'
+                                        ? 'Other: ' . ($json['other_text'] ?? '')
+                                        : $json['option'];
+                                } else {
+                                    $displayVal = $answer->value ?? '';
+                                }
+                            @endphp
                             <span class="sv-pill sv-pill--emerald">
                                 <svg fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
-                                {{ $answer->value }}
+                                {{ $displayVal }}
                             </span>
 
                         @elseif ($question->type === 'textarea')
