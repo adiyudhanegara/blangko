@@ -142,10 +142,18 @@
 .sv-textarea-block p { font-size:.875rem; color:#374151; white-space:pre-wrap; line-height:1.625; margin:0; }
 .dark .sv-textarea-block p { color:#d1d5db; }
 
-.sv-file { display:inline-flex; align-items:center; gap:.5rem; background:rgba(99,102,241,.06); border:1px solid rgba(99,102,241,.2); border-radius:.5rem; padding:.5rem .875rem; font-size:.875rem; color:#4338ca; max-width:100%; }
-.dark .sv-file { background:rgba(99,102,241,.12); border-color:rgba(99,102,241,.25); color:#a5b4fc; }
-.sv-file svg { width:1rem; height:1rem; flex-shrink:0; }
-.sv-file span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sv-file-grid { display:flex; flex-wrap:wrap; gap:.625rem; }
+.sv-file-card { display:flex; flex-direction:column; align-items:center; border-radius:.5rem; border:1px solid #e5e7eb; overflow:hidden; background:#fff; text-decoration:none; transition:border-color .15s; }
+.dark .sv-file-card { border-color:#374151; background:#1f2937; }
+.sv-file-card:hover { border-color:#818cf8; }
+.sv-file-thumb { display:block; width:7rem; height:5.5rem; object-fit:cover; }
+.sv-file-icon { width:7rem; height:5.5rem; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.25rem; background:#f9fafb; }
+.dark .sv-file-icon { background:#111827; }
+.sv-file-icon svg { width:2rem; height:2rem; color:#d1d5db; }
+.dark .sv-file-icon svg { color:#4b5563; }
+.sv-file-ext { font-size:.6rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#9ca3af; }
+.sv-file-name { width:7rem; padding:.25rem .375rem .375rem; font-size:.7rem; color:#6b7280; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center; }
+.dark .sv-file-name { color:#9ca3af; }
 
 .sv-link { display:inline-flex; align-items:center; gap:.375rem; font-size:.875rem; font-weight:500; color:#6366f1; text-decoration:none; }
 .dark .sv-link { color:#a5b4fc; }
@@ -275,6 +283,7 @@
                     ($answer->value !== null && $answer->value !== '')
                     || $answer->value_json !== null
                     || $answer->file_path !== null
+                    || !empty($answer->file_paths)
                 );
             @endphp
 
@@ -322,13 +331,46 @@
                             </span>
 
                         @elseif ($question->type === 'file')
-                            @if ($answer->file_path)
-                                <div class="sv-file">
-                                    <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13"/></svg>
-                                    <span>{{ $answer->file_original_name ?? basename($answer->file_path) }}</span>
-                                </div>
+                            @php
+                                $imgExts  = ['jpg','jpeg','png','gif','webp'];
+                                $allFiles = [];
+                                if ($answer->file_path) {
+                                    $allFiles[] = [
+                                        'url'  => route('admin.file.serve', $answer->id),
+                                        'name' => $answer->file_original_name ?? basename($answer->file_path),
+                                        'ext'  => strtolower(pathinfo($answer->file_path, PATHINFO_EXTENSION)),
+                                    ];
+                                } elseif ($answer->file_paths) {
+                                    foreach ($answer->file_paths as $idx => $fi) {
+                                        $allFiles[] = [
+                                            'url'  => route('admin.file.serve', [$answer->id, $idx]),
+                                            'name' => $fi['original_name'] ?? basename($fi['path']),
+                                            'ext'  => strtolower(pathinfo($fi['path'], PATHINFO_EXTENSION)),
+                                        ];
+                                    }
+                                }
+                            @endphp
+                            @if (empty($allFiles))
+                                <span class="sv-no-answer">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                                    No file uploaded
+                                </span>
                             @else
-                                <span class="sv-no-answer">No file uploaded</span>
+                                <div class="sv-file-grid">
+                                    @foreach ($allFiles as $f)
+                                        <a href="{{ $f['url'] }}" target="_blank" class="sv-file-card" title="{{ $f['name'] }}">
+                                            @if (in_array($f['ext'], $imgExts))
+                                                <img src="{{ $f['url'] }}" alt="{{ $f['name'] }}" class="sv-file-thumb" loading="lazy">
+                                            @else
+                                                <div class="sv-file-icon">
+                                                    <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+                                                    <span class="sv-file-ext">{{ $f['ext'] ?: 'file' }}</span>
+                                                </div>
+                                            @endif
+                                            <span class="sv-file-name">{{ $f['name'] }}</span>
+                                        </a>
+                                    @endforeach
+                                </div>
                             @endif
 
                         @elseif ($question->type === 'checkbox')

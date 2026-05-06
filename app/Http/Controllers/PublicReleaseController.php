@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Answer;
 use App\Models\FormRelease;
 use App\Models\Participant;
 use App\Models\ReleaseSet;
 use App\Models\Submission;
+use Illuminate\Support\Facades\Storage;
 
 class PublicReleaseController extends Controller
 {
@@ -137,5 +139,29 @@ class PublicReleaseController extends Controller
         }
 
         return view('livewire.public.submission-history-page', compact('release'));
+    }
+
+    /** Serve a stored submission file to the participant who owns it. */
+    public function serveFile(Answer $answer, int $index = -1)
+    {
+        $participantId = session('blangko_participant_id');
+
+        if (!$participantId || $answer->submission->participant_id !== $participantId) {
+            abort(403);
+        }
+
+        if ($index >= 0 && $answer->file_paths) {
+            $file = $answer->file_paths[$index] ?? abort(404);
+            return Storage::disk('local')->response($file['path'], $file['original_name']);
+        }
+
+        if ($answer->file_path) {
+            return Storage::disk('local')->response(
+                $answer->file_path,
+                $answer->file_original_name ?? basename($answer->file_path),
+            );
+        }
+
+        abort(404);
     }
 }

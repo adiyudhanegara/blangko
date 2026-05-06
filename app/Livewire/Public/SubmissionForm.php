@@ -17,9 +17,11 @@ class SubmissionForm extends Component
     public FormRelease $release;
     public Submission  $submission;
 
-    public array $answers     = [];
-    public array $otherText   = []; // free-text for "Other" option per question
-    public array $fileUploads = [];
+    public array $answers       = [];
+    public array $otherText     = []; // free-text for "Other" option per question
+    public $fileUploads         = [];
+    /** Existing stored files keyed by question id: [ ['answer_id'=>int, 'files'=>[...]] ] */
+    public array $existingFiles = [];
 
     public bool $submitted = false;
 
@@ -59,6 +61,28 @@ class SubmissionForm extends Component
     protected function loadAnswer(Answer $answer): void
     {
         $qid = $answer->release_question_id;
+
+        // File answers are not stored in $answers — track them separately for display
+        if ($answer->file_path !== null || !empty($answer->file_paths)) {
+            $files = [];
+            if ($answer->file_path) {
+                $files[] = [
+                    'url'  => route('public.file.serve', $answer->id),
+                    'name' => $answer->file_original_name ?? basename($answer->file_path),
+                    'ext'  => strtolower(pathinfo($answer->file_path, PATHINFO_EXTENSION)),
+                ];
+            } elseif ($answer->file_paths) {
+                foreach ($answer->file_paths as $idx => $f) {
+                    $files[] = [
+                        'url'  => route('public.file.serve', [$answer->id, $idx]),
+                        'name' => $f['original_name'] ?? basename($f['path']),
+                        'ext'  => strtolower(pathinfo($f['path'], PATHINFO_EXTENSION)),
+                    ];
+                }
+            }
+            $this->existingFiles[$qid] = $files;
+            return;
+        }
 
         if ($answer->value_json !== null) {
             $json = $answer->value_json;
@@ -147,6 +171,16 @@ class SubmissionForm extends Component
                 $ruleParts[] = 'array';
             }
 
+            if ($question->type === 'file') {
+                // Only require a new upload when no existing file is already saved
+                if ($question->is_required && empty($this->existingFiles[$question->id])) {
+                    $fileKey            = "fileUploads.{$question->id}";
+                    $rules[$fileKey]    = 'required';
+                    $messages["{$fileKey}.required"] = "{$question->label} is required.";
+                }
+                continue;
+            }
+
             $vr = $question->validation_rules ?? [];
             if (!empty($vr['min'])) {
                 $ruleParts[] = 'min:' . $vr['min'];
@@ -156,7 +190,7 @@ class SubmissionForm extends Component
             }
 
             if (!empty($ruleParts)) {
-                $rules[$key]              = implode('|', $ruleParts);
+                $rules[$key]                 = implode('|', $ruleParts);
                 $messages["{$key}.required"] = "{$question->label} is required.";
             }
 
@@ -237,36 +271,35 @@ class SubmissionForm extends Component
         $maxFiles = (int) ($question->validation_rules['max_files'] ?? 1);
 
         if ($maxFiles <= 1 || !is_array($upload)) {
-            // Single file upload (legacy behaviour)
             $file = is_array($upload) ? $upload[0] : $upload;
-            $path = $file->store("submissions/{$this->submission->id}", 'local');
+
+            // Capture before store() moves the temp file
+            $originalName = $file->getClientOriginalName();
+            $path         = $file->store("submissions/{$this->submission->id}", 'local');
+
             Answer::updateOrCreate(
                 ['submission_id' => $this->submission->id, 'release_question_id' => $question->id],
-                [
-                    'file_path'          => $path,
-                    'file_original_name' => $file->getClientOriginalName(),
-                    'file_paths'         => null,
-                ]
+                ['file_path' => $path, 'file_original_name' => $originalName, 'file_paths' => null]
             );
-            return;
+        } else {
+            $filePaths = [];
+            foreach ((array) $upload as $file) {
+                $originalName = $file->getClientOriginalName();
+                $size         = $file->getSize();
+                $mime         = $file->getMimeType();
+                $path         = $file->store("submissions/{$this->submission->id}", 'local');
+
+                $filePaths[] = compact('path', 'originalName', 'size', 'mime') + ['original_name' => $originalName];
+            }
+
+            Answer::updateOrCreate(
+                ['submission_id' => $this->submission->id, 'release_question_id' => $question->id],
+                ['file_path' => null, 'file_original_name' => null, 'file_paths' => $filePaths]
+            );
         }
 
-        // Multiple file uploads
-        $filePaths = [];
-        foreach ((array) $upload as $file) {
-            $path        = $file->store("submissions/{$this->submission->id}", 'local');
-            $filePaths[] = [
-                'path'          => $path,
-                'original_name' => $file->getClientOriginalName(),
-                'size'          => $file->getSize(),
-                'mime'          => $file->getMimeType(),
-            ];
-        }
-
-        Answer::updateOrCreate(
-            ['submission_id' => $this->submission->id, 'release_question_id' => $question->id],
-            ['file_path' => null, 'file_original_name' => null, 'file_paths' => $filePaths]
-        );
+        // Null out so Livewire dehydration doesn't try to stat the now-moved temp file
+        $this->fileUploads[$question->id] = null;
     }
 
     public function canEdit(): bool

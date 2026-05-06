@@ -205,6 +205,7 @@ class FormResource extends Resource
             'index'  => Pages\ListForms::route('/'),
             'create' => Pages\CreateForm::route('/create'),
             'edit'   => Pages\EditForm::route('/{record}/edit'),
+            'import' => Pages\ImportForm::route('/import'),
         ];
     }
 

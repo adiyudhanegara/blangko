@@ -11,7 +11,14 @@ Route::middleware(['auth'])->group(function () {
         ->name('admin.releases.export');
     Route::get('/admin/release-sets/{releaseSet}/export', [AdminExportController::class, 'exportReleaseSet'])
         ->name('admin.release-sets.export');
+    Route::get('/admin/form-import-template', [AdminExportController::class, 'formImportTemplate'])
+        ->name('admin.form-import-template');
+    Route::get('/admin/file/{answer}/{index?}', [AdminExportController::class, 'serveFile'])
+        ->name('admin.file.serve');
 });
+
+Route::get('/r/file/{answer}/{index?}', [PublicReleaseController::class, 'serveFile'])
+    ->name('public.file.serve');
 
 Route::prefix('r')->name('release.')->group(function () {
     // Entry point — shows identify/register form, or redirects to forms list if already identified

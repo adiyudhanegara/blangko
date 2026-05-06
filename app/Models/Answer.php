@@ -29,6 +29,18 @@ class Answer extends Model
 
     public function getDisplayValueAttribute(): string
     {
+        // File answers: return original filename(s)
+        if ($this->file_path !== null) {
+            return $this->file_original_name ?? basename($this->file_path);
+        }
+
+        if (!empty($this->file_paths)) {
+            return implode(', ', array_map(
+                fn ($f) => $f['original_name'] ?? basename($f['path']),
+                $this->file_paths,
+            ));
+        }
+
         /** @var array<mixed>|null $json */
         $json = $this->value_json;
 
