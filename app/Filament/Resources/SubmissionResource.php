@@ -60,12 +60,13 @@ class SubmissionResource extends Resource
                     ->label('Submitted')
                     ->dateTime('d M Y, H:i')
                     ->sortable()
-                    ->default('—'),
+                    ->placeholder('—'),
 
                 Tables\Columns\TextColumn::make('last_edited_at')
                     ->label('Last Edited')
                     ->dateTime('d M Y, H:i')
                     ->sortable()
+                    ->placeholder('—')
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([

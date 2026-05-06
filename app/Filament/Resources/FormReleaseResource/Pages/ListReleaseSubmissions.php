@@ -70,7 +70,7 @@ class ListReleaseSubmissions extends Page implements HasTable
                     ->label('Submitted')
                     ->dateTime('d M Y, H:i')
                     ->sortable()
-                    ->default('—'),
+                    ->placeholder('—'),
             ])
             ->filters([
                 \Filament\Tables\Filters\SelectFilter::make('status')

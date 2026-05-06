@@ -70,26 +70,33 @@ class ReleaseEntry extends Component
             'divisionId' => 'nullable|exists:divisions,id',
         ]);
 
-        $data = ['name' => $this->name, 'division_id' => $this->divisionId, 'status' => 'active'];
+        // Store registration data in session — participant row is created only when
+        // the form is first saved, avoiding orphan records if the user abandons.
+        session([
+            'blangko_pending_participant' => [
+                'name'        => $this->name,
+                'division_id' => $this->divisionId,
+                'phone'       => $this->identifierType === 'phone' ? $this->identifier : null,
+                'email'       => $this->identifierType === 'email' ? $this->identifier : null,
+                'status'      => 'active',
+            ],
+            'blangko_release_id' => $this->release->id,
+        ]);
 
-        if ($this->identifierType === 'phone') {
-            $data['phone'] = $this->identifier;
-        } else {
-            $data['email'] = $this->identifier;
-        }
-
-        $participant = Participant::create($data);
-        $this->startOrResumeSubmission($participant);
+        $this->redirectRoute('release.form', $this->release->public_token);
     }
 
     protected function startOrResumeSubmission(Participant $participant): void
     {
         $submission = Submission::firstOrCreate(
             ['form_release_id' => $this->release->id, 'participant_id' => $participant->id],
-            ['status' => 'in_progress', 'ip_address' => request()->ip(), 'user_agent' => request()->userAgent()],
+            ['status' => 'draft', 'ip_address' => request()->ip(), 'user_agent' => request()->userAgent()],
         );
 
-        session(['blangko_participant_id' => $participant->id, 'blangko_submission_id' => $submission->id]);
+        session([
+            'blangko_participant_id' => $participant->id,
+            'blangko_submission_id'  => $submission->id,
+        ]);
 
         $this->redirectRoute('release.form', $this->release->public_token);
     }

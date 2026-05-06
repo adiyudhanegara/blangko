@@ -4,10 +4,10 @@ namespace App\Livewire\Public;
 
 use App\Models\Answer;
 use App\Models\FormRelease;
+use App\Models\Participant;
 use App\Models\ReleaseQuestion;
 use App\Models\Submission;
 use App\Services\ConditionalLogicEvaluator;
-use Illuminate\Support\Facades\Storage;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -25,8 +25,29 @@ class SubmissionForm extends Component
 
     public function mount(): void
     {
+        // Materialise a pending (session-only) new participant now that they've
+        // actually reached the form — only at this point do we write to the DB.
+        if (session('blangko_pending_participant') && session('blangko_release_id') == $this->release->id) {
+            $participant = Participant::create(session('blangko_pending_participant'));
+            session()->forget('blangko_pending_participant');
+            session()->forget('blangko_release_id');
+
+            $submission = Submission::create([
+                'form_release_id' => $this->release->id,
+                'participant_id'  => $participant->id,
+                'status'          => 'draft',
+                'ip_address'      => request()->ip(),
+                'user_agent'      => request()->userAgent(),
+            ]);
+
+            session([
+                'blangko_participant_id' => $participant->id,
+                'blangko_submission_id'  => $submission->id,
+            ]);
+        }
+
         $participantId = session('blangko_participant_id');
-        $submissionId = session('blangko_submission_id');
+        $submissionId  = session('blangko_submission_id');
 
         if (!$participantId || !$submissionId) {
             $this->redirectRoute('release.show', $this->release->public_token);

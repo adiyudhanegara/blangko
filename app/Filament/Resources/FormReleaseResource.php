@@ -3,12 +3,10 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\FormReleaseResource\Pages;
-use App\Models\Form;
 use App\Models\FormRelease;
 use App\Services\ReleasePublisher;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -143,9 +141,6 @@ class FormReleaseResource extends Resource
                     ->preload(),
 
                 Tables\Filters\TrashedFilter::make(),
-            ])
-            ->headerActions([
-                CreateAction::make(),
             ])
             ->actions([
                 EditAction::make(),
