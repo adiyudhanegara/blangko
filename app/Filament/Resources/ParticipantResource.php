@@ -58,6 +58,17 @@ class ParticipantResource extends Resource
                 ->default('active')
                 ->required(),
 
+            Forms\Components\TextInput::make('nip')
+                ->label('NIP (Employee Registration Number)')
+                ->nullable()
+                ->unique(ignoreRecord: true)
+                ->maxLength(50),
+
+            Forms\Components\TextInput::make('position')
+                ->label('Position / Job Title')
+                ->nullable()
+                ->maxLength(255),
+
             Forms\Components\TextInput::make('identifier')
                 ->label('Identifier (NIK / Employee ID)')
                 ->nullable()
@@ -70,8 +81,10 @@ class ParticipantResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')->searchable()->sortable(),
-                Tables\Columns\TextColumn::make('email')->searchable()->sortable(),
-                Tables\Columns\TextColumn::make('phone')->searchable(),
+                Tables\Columns\TextColumn::make('nip')->label('NIP')->searchable()->sortable(),
+                Tables\Columns\TextColumn::make('position')->label('Position')->sortable()->searchable()->toggleable(),
+                Tables\Columns\TextColumn::make('email')->searchable()->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('phone')->searchable()->toggleable(),
                 Tables\Columns\TextColumn::make('division.name')->label('Division')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('status')
                     ->badge()

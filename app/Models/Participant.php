@@ -12,7 +12,7 @@ class Participant extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'division_id', 'name', 'email', 'phone', 'identifier', 'status',
+        'division_id', 'name', 'email', 'phone', 'identifier', 'nip', 'position', 'status',
     ];
 
     public function division(): BelongsTo

@@ -144,6 +144,19 @@
                         </svg>
                         Email
                     </button>
+                    <button
+                        wire:click="$set('identifierType', 'nip')"
+                        type="button"
+                        class="flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition-all duration-150
+                            {{ $identifierType === 'nip'
+                                ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/80'
+                                : 'text-slate-500 hover:text-slate-700' }}"
+                    >
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z" />
+                        </svg>
+                        NIP
+                    </button>
                 </div>
 
                 {{-- Input field --}}
@@ -167,7 +180,7 @@
                                        @error('identifier') border-red-400 focus:border-red-500 focus:ring-red-500/20 @enderror"
                             >
                         </div>
-                    @else
+                    @elseif ($identifierType === 'email')
                         <label for="identifier" class="block text-sm font-medium text-slate-700">Email Address</label>
                         <div class="relative">
                             <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
@@ -181,6 +194,25 @@
                                 wire:model="identifier"
                                 placeholder="you@example.com"
                                 autocomplete="email"
+                                class="block w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-3 text-base text-slate-900 placeholder-slate-400
+                                       shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none
+                                       @error('identifier') border-red-400 focus:border-red-500 focus:ring-red-500/20 @enderror"
+                            >
+                        </div>
+                    @else
+                        <label for="identifier" class="block text-sm font-medium text-slate-700">NIP</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z" />
+                                </svg>
+                            </div>
+                            <input
+                                type="text"
+                                id="identifier"
+                                wire:model="identifier"
+                                placeholder="e.g. 199001012020011001"
+                                autocomplete="off"
                                 class="block w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 py-3 text-base text-slate-900 placeholder-slate-400
                                        shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none
                                        @error('identifier') border-red-400 focus:border-red-500 focus:ring-red-500/20 @enderror"

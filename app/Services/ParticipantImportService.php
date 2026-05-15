@@ -32,6 +32,8 @@ class ParticipantImportService
         $nameCol       = $col('name');
         $emailCol      = $col('email');
         $phoneCol      = $col('phone');
+        $nipCol        = $col('nip');
+        $positionCol   = $col('position');
         $identifierCol = $col('identifier');
         $divisionCol   = $col('division');
         $statusCol     = $col('status');
@@ -58,8 +60,10 @@ class ParticipantImportService
                 continue;
             }
 
-            $email      = $emailCol !== false ? (trim((string) ($row[$emailCol] ?? '')) ?: null) : null;
-            $phone      = $phoneCol !== false ? (trim((string) ($row[$phoneCol] ?? '')) ?: null) : null;
+            $email      = $emailCol !== false      ? (trim((string) ($row[$emailCol]      ?? '')) ?: null) : null;
+            $phone      = $phoneCol !== false      ? (trim((string) ($row[$phoneCol]      ?? '')) ?: null) : null;
+            $nip        = $nipCol !== false        ? (trim((string) ($row[$nipCol]        ?? '')) ?: null) : null;
+            $position   = $positionCol !== false   ? (trim((string) ($row[$positionCol]   ?? '')) ?: null) : null;
             $identifier = $identifierCol !== false ? (trim((string) ($row[$identifierCol] ?? '')) ?: null) : null;
             $status     = $statusCol !== false ? strtolower(trim((string) ($row[$statusCol] ?? ''))) : 'active';
             $status     = in_array($status, ['active', 'inactive'], true) ? $status : 'active';
@@ -78,6 +82,8 @@ class ParticipantImportService
             $attributes = [
                 'name'        => $name,
                 'phone'       => $phone,
+                'nip'         => $nip,
+                'position'    => $position,
                 'identifier'  => $identifier,
                 'division_id' => $divisionId,
                 'status'      => $status,
@@ -86,6 +92,8 @@ class ParticipantImportService
 
             if ($email !== null) {
                 Participant::withTrashed()->updateOrCreate(['email' => $email], $attributes + ['email' => $email]);
+            } elseif ($nip !== null) {
+                Participant::withTrashed()->updateOrCreate(['nip' => $nip], $attributes);
             } elseif ($identifier !== null) {
                 Participant::withTrashed()->updateOrCreate(['identifier' => $identifier], $attributes);
             } else {

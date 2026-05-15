@@ -14,7 +14,7 @@ class ReleaseEntry extends Component
     public FormRelease $release;
 
     // Step 1: identification
-    public string $identifierType = 'phone'; // 'phone' or 'email'
+    public string $identifierType = 'phone'; // 'phone', 'email', or 'nip'
     public string $identifier = '';
 
     // Step 2: registration (new participant)
@@ -33,28 +33,26 @@ class ReleaseEntry extends Component
             ];
         }
 
-        return $this->identifierType === 'phone'
-            ? ['identifier' => 'required|string|max:30']
-            : ['identifier' => 'required|email|max:255'];
+        return ['identifier' => match ($this->identifierType) {
+            'email' => 'required|email|max:255',
+            default => 'required|string|max:50',
+        }];
     }
 
     public function identify(): void
     {
         $this->errorMessage = null;
-        $this->validate([
-            'identifier' => $this->identifierType === 'phone'
-                ? 'required|string|max:30'
-                : 'required|email|max:255',
-        ]);
+        $this->validate(['identifier' => match ($this->identifierType) {
+            'email' => 'required|email|max:255',
+            default => 'required|string|max:50',
+        }]);
 
-        $query = Participant::query();
-        if ($this->identifierType === 'phone') {
-            $query->where('phone', $this->identifier);
-        } else {
-            $query->where('email', $this->identifier);
-        }
-
-        $participant = $query->first();
+        $participant = match ($this->identifierType) {
+            'phone' => Participant::where('phone', $this->identifier)->first(),
+            'email' => Participant::where('email', $this->identifier)->first(),
+            'nip'   => Participant::where('nip', $this->identifier)->first(),
+            default => null,
+        };
 
         if ($participant) {
             $this->startOrResumeSubmission($participant);
@@ -70,14 +68,13 @@ class ReleaseEntry extends Component
             'divisionId' => 'nullable|exists:divisions,id',
         ]);
 
-        // Store registration data in session — participant row is created only when
-        // the form is first saved, avoiding orphan records if the user abandons.
         session([
             'blangko_pending_participant' => [
                 'name'        => $this->name,
                 'division_id' => $this->divisionId,
                 'phone'       => $this->identifierType === 'phone' ? $this->identifier : null,
                 'email'       => $this->identifierType === 'email' ? $this->identifier : null,
+                'nip'         => $this->identifierType === 'nip'   ? $this->identifier : null,
                 'status'      => 'active',
             ],
             'blangko_release_id' => $this->release->id,

@@ -12,7 +12,7 @@ class ReleaseSetEntry extends Component
 {
     public ReleaseSet $releaseSet;
 
-    public string $identifierType = 'phone';
+    public string $identifierType = 'phone'; // 'phone', 'email', or 'nip'
     public string $identifier     = '';
 
     public bool    $showRegistration = false;
@@ -25,19 +25,18 @@ class ReleaseSetEntry extends Component
     {
         $this->errorMessage = null;
         $this->validate([
-            'identifier' => $this->identifierType === 'phone'
-                ? 'required|string|max:30'
-                : 'required|email|max:255',
+            'identifier' => match ($this->identifierType) {
+                'email' => 'required|email|max:255',
+                default => 'required|string|max:50',
+            },
         ]);
 
-        $query = Participant::query();
-        if ($this->identifierType === 'phone') {
-            $query->where('phone', $this->identifier);
-        } else {
-            $query->where('email', $this->identifier);
-        }
-
-        $participant = $query->first();
+        $participant = match ($this->identifierType) {
+            'phone' => Participant::where('phone', $this->identifier)->first(),
+            'email' => Participant::where('email', $this->identifier)->first(),
+            'nip'   => Participant::where('nip', $this->identifier)->first(),
+            default => null,
+        };
 
         if ($participant) {
             $this->startSession($participant);
@@ -60,6 +59,7 @@ class ReleaseSetEntry extends Component
                 'division_id' => $this->divisionId,
                 'phone'       => $this->identifierType === 'phone' ? $this->identifier : null,
                 'email'       => $this->identifierType === 'email' ? $this->identifier : null,
+                'nip'         => $this->identifierType === 'nip'   ? $this->identifier : null,
                 'status'      => 'active',
             ],
             'blangko_release_set_id' => $this->releaseSet->id,
