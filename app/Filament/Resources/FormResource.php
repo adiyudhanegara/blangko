@@ -125,7 +125,8 @@ class FormResource extends Resource
                                         ->columns(2)
                                         ->defaultItems(1)
                                         ->addActionLabel('Add Option')
-                                        ->reorderable('order')
+                                        ->reorderable()
+                                        ->orderColumn('order')
                                         ->columnSpanFull()
                                         ->visible(fn (Get $get): bool =>
                                             in_array($get('type'), ['radio', 'checkbox', 'select'])
@@ -134,8 +135,15 @@ class FormResource extends Resource
                                 ->columns(2)
                                 ->defaultItems(1)
                                 ->addActionLabel('Add Question')
-                                ->reorderable('order')
+                                ->reorderable()
+                                ->orderColumn('order')
+                                ->itemLabel(fn (array $state): ?string =>
+                                    ($state['label'] ?? null)
+                                        ? '[' . strtoupper($state['type'] ?? '?') . '] ' . $state['label']
+                                        : null
+                                )
                                 ->collapsible()
+                                ->collapsed()
                                 ->cloneable()
                                 ->columnSpanFull(),
                         ]),
