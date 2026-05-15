@@ -63,15 +63,26 @@
 .rd-form-spacer{width:14px;flex-shrink:0}
 
 /* Pending participants panel */
-.rd-pending{display:none;background:#fffbeb;border-top:1px solid #fde68a;padding:.75rem 1.5rem}
+.rd-pending{display:none;background:#f8fafc;border-top:1px solid #e2e8f0;padding:.75rem 1.5rem}
 .rd-pending.is-open{display:block}
-.rd-pending-title{font-size:.6875rem;font-weight:700;color:#b45309;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem}
+.rd-pending-title{font-size:.6875rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem}
 .rd-pending-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.375rem}
-.rd-p-card{display:flex;align-items:center;gap:.5rem;border-radius:.5rem;background:#fff;border:1px solid #fde68a;padding:.375rem .625rem}
-.rd-p-avatar{flex-shrink:0;width:1.25rem;height:1.25rem;border-radius:9999px;background:#fef3c7;display:flex;align-items:center;justify-content:center}
-.rd-p-initial{font-size:.625rem;font-weight:700;color:#d97706}
+.rd-p-card{display:flex;align-items:center;gap:.5rem;border-radius:.5rem;background:#fff;border:1px solid #e2e8f0;padding:.375rem .625rem;cursor:default;transition:border-color .15s,box-shadow .15s}
+.rd-p-card:hover{border-color:#a5b4fc;box-shadow:0 0 0 2px rgba(99,102,241,.1)}
+.rd-p-avatar{flex-shrink:0;width:1.25rem;height:1.25rem;border-radius:9999px;background:#e0e7ff;display:flex;align-items:center;justify-content:center}
+.rd-p-initial{font-size:.625rem;font-weight:700;color:#4f46e5}
 .rd-p-name{font-size:.75rem;font-weight:500;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rd-p-div{font-size:.6875rem;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Search inside pending panel */
+.rd-search{position:relative;margin-bottom:.625rem}
+.rd-search-input{width:100%;border:1px solid #e2e8f0;border-radius:.5rem;background:#f8fafc;padding:.375rem .625rem .375rem 2rem;font-size:.6875rem;color:#374151;outline:none;transition:border-color .15s,box-shadow .15s}
+.rd-search-input:focus{border-color:#818cf8;box-shadow:0 0 0 2px rgba(99,102,241,.15)}
+.rd-search-input::placeholder{color:#94a3b8;opacity:.8}
+.rd-search-icon{position:absolute;left:.5rem;top:50%;transform:translateY(-50%);color:#94a3b8;pointer-events:none}
+.rd-no-results{font-size:.6875rem;color:#9ca3af;text-align:center;padding:.375rem 0;grid-column:1/-1}
+/* Floating name tooltip */
+.rd-tip{position:fixed;z-index:9999;background:#1e293b;color:#f8fafc;font-size:.6875rem;font-weight:500;padding:.25rem .625rem;border-radius:.375rem;pointer-events:none;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.2)}
 </style>
 
 <script>
@@ -85,6 +96,20 @@ function rdForm() {
     return {
         open: false,
         toggle() { this.open = !this.open; }
+    };
+}
+function rdPending(names) {
+    return {
+        search: '',
+        names: names,
+        tip: { show: false, name: '', x: 0, y: 0 },
+        get hasResults() {
+            return !this.search || this.names.some(n => n.includes(this.search.toLowerCase()));
+        },
+        showTip(name, event) {
+            this.tip = { show: true, name, x: event.clientX + 12, y: event.clientY - 34 };
+        },
+        hideTip() { this.tip.show = false; },
     };
 }
 </script>
@@ -233,23 +258,49 @@ function rdForm() {
                                     {{-- Pending participants --}}
                                     @if ($fi['pending']->isNotEmpty())
                                         <div :class="open ? 'rd-pending is-open' : 'rd-pending'">
-                                            <p class="rd-pending-title">
-                                                Not yet submitted ({{ $fi['pending']->count() }})
-                                            </p>
-                                            <div class="rd-pending-grid">
-                                                @foreach ($fi['pending'] as $participant)
-                                                    <div class="rd-p-card">
-                                                        <div class="rd-p-avatar">
-                                                            <span class="rd-p-initial">{{ strtoupper(substr($participant->name, 0, 1)) }}</span>
+                                            <div x-data="rdPending({{ Js::from($fi['pending']->pluck('name')->map(fn ($n) => strtolower($n))->values()) }})">
+                                                {{-- Fixed tooltip (bypasses overflow:hidden on .rd-card) --}}
+                                                <div class="rd-tip"
+                                                     x-show="tip.show"
+                                                     x-text="tip.name"
+                                                     :style="`left:${tip.x}px;top:${tip.y}px`"
+                                                     style="display:none"></div>
+
+                                                <p class="rd-pending-title">
+                                                    Not yet submitted ({{ $fi['pending']->count() }})
+                                                </p>
+                                                <div class="rd-search">
+                                                    <svg class="rd-search-icon" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0015.803 15.803z"/>
+                                                    </svg>
+                                                    <input
+                                                        x-model="search"
+                                                        type="text"
+                                                        class="rd-search-input"
+                                                        placeholder="Search participant…"
+                                                    />
+                                                </div>
+                                                <div class="rd-pending-grid">
+                                                    @foreach ($fi['pending'] as $participant)
+                                                        <div class="rd-p-card"
+                                                             data-name="{{ strtolower($participant->name) }}"
+                                                             data-fullname="{{ $participant->name }}"
+                                                             x-show="!search || $el.dataset.name.includes(search.toLowerCase())"
+                                                             @mouseenter="showTip($el.dataset.fullname, $event)"
+                                                             @mouseleave="hideTip()">
+                                                            <div class="rd-p-avatar">
+                                                                <span class="rd-p-initial">{{ strtoupper(substr($participant->name, 0, 1)) }}</span>
+                                                            </div>
+                                                            <div style="min-width:0">
+                                                                <p class="rd-p-name">{{ $participant->name }}</p>
+                                                                @if ($participant->division)
+                                                                    <p class="rd-p-div">{{ $participant->division->name }}</p>
+                                                                @endif
+                                                            </div>
                                                         </div>
-                                                        <div style="min-width:0">
-                                                            <p class="rd-p-name">{{ $participant->name }}</p>
-                                                            @if ($participant->division)
-                                                                <p class="rd-p-div">{{ $participant->division->name }}</p>
-                                                            @endif
-                                                        </div>
-                                                    </div>
-                                                @endforeach
+                                                    @endforeach
+                                                    <p class="rd-no-results" x-show="!hasResults" style="display:none">No participants match.</p>
+                                                </div>
                                             </div>
                                         </div>
                                     @endif
