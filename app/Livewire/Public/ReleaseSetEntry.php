@@ -5,14 +5,13 @@ namespace App\Livewire\Public;
 use App\Models\Division;
 use App\Models\Participant;
 use App\Models\ReleaseSet;
-use App\Models\Submission;
 use Livewire\Component;
 
 class ReleaseSetEntry extends Component
 {
     public ReleaseSet $releaseSet;
 
-    public string $identifierType = 'phone'; // 'phone', 'email', or 'nip'
+    public string $identifierType = 'nip'; // 'nip', 'phone', or 'email'
     public string $identifier     = '';
 
     public bool    $showRegistration = false;
