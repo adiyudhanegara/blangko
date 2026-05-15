@@ -13,6 +13,8 @@ Route::middleware(['auth'])->group(function () {
         ->name('admin.release-sets.export');
     Route::get('/admin/form-import-template', [AdminExportController::class, 'formImportTemplate'])
         ->name('admin.form-import-template');
+    Route::get('/admin/division-import-template', [AdminExportController::class, 'divisionImportTemplate'])
+        ->name('admin.division-import-template');
     Route::get('/admin/file/{answer}/{index?}', [AdminExportController::class, 'serveFile'])
         ->name('admin.file.serve');
 });

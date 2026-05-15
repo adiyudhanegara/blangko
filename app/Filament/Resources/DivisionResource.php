@@ -82,6 +82,7 @@ class DivisionResource extends Resource
             'index'  => Pages\ListDivisions::route('/'),
             'create' => Pages\CreateDivision::route('/create'),
             'edit'   => Pages\EditDivision::route('/{record}/edit'),
+            'import' => Pages\ImportDivisions::route('/import'),
         ];
     }
 
