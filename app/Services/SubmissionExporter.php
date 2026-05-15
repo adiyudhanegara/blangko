@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Answer;
 use App\Models\FormExportTemplate;
 use App\Models\FormRelease;
+use App\Models\ReleaseQuestion;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 
 class SubmissionExporter
@@ -232,12 +233,51 @@ class SubmissionExporter
             if ($q->type === 'file' && $answer) {
                 $cellRef = Coordinate::stringFromColumnIndex($firstQColIdx + $qIdx) . $excelRow;
                 $row[]   = $this->buildFileCell($answer, $cellRef);
+            } elseif ($answer && in_array($q->type, ['radio', 'select', 'checkbox'], true)) {
+                $row[] = $this->resolveOptionLabel($answer, $q);
             } else {
                 $row[] = $answer ? $answer->display_value : '';
             }
         }
 
         return $row;
+    }
+
+    // ── Option label resolution ────────────────────────────────────────────
+
+    private function resolveOptionLabel(Answer $answer, ReleaseQuestion $q): string
+    {
+        /** @var array<string,string> $map value → label */
+        $map  = $q->options->pluck('label', 'value')->all();
+        $json = $answer->value_json;
+
+        if ($json === null) {
+            $raw = (string) ($answer->value ?? '');
+            return $map[$raw] ?? $raw;
+        }
+
+        // Radio / select: {"option": "value"} or {"option": "other", "other_text": "..."}
+        if (isset($json['option'])) {
+            if ($json['option'] === 'other') {
+                return (string) ($json['other_text'] ?? '');
+            }
+            return $map[$json['option']] ?? (string) ($json['option'] ?? '');
+        }
+
+        // Checkbox: {"values": [...], "other_text": "..."}
+        if (isset($json['values'])) {
+            $labels = array_map(
+                fn ($v) => $map[$v] ?? $v,
+                array_filter((array) $json['values'], fn ($v) => $v !== 'other'),
+            );
+            if (!empty($json['other_text'])) {
+                $labels[] = (string) $json['other_text'];
+            }
+            return implode('; ', $labels);
+        }
+
+        // Plain array (legacy)
+        return implode('; ', array_map(fn ($v) => $map[$v] ?? $v, (array) $json));
     }
 
     // ── File cell handling ─────────────────────────────────────────────────

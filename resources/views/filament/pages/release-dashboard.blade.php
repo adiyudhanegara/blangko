@@ -8,9 +8,10 @@
 
 /* Release-set card */
 .rd-card{border-radius:1rem;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08);border:1px solid #e2e8f0;overflow:hidden}
-.rd-card-btn{width:100%;display:flex;align-items:center;gap:1rem;padding:.875rem 1.25rem;text-align:left;background:none;border:none;border-bottom:1px solid transparent;cursor:pointer;transition:background .15s}
+.rd-card-top{display:flex;align-items:stretch;border-bottom:1px solid transparent;transition:border-color .15s}
+.rd-card-top.has-sep{border-bottom-color:#f1f5f9}
+.rd-card-btn{flex:1;display:flex;align-items:center;gap:1rem;padding:.875rem 1.25rem;text-align:left;background:none;border:none;cursor:pointer;transition:background .15s}
 .rd-card-btn:hover{background:#f8fafc}
-.rd-card-btn[aria-expanded="true"]{border-bottom-color:#f1f5f9}
 .rd-status-bar{width:.375rem;align-self:stretch;border-radius:9999px;flex-shrink:0}
 .rd-status-open   {background:linear-gradient(to bottom,#10b981,#14b8a6)}
 .rd-status-scheduled{background:linear-gradient(to bottom,#f59e0b,#f97316)}
@@ -36,14 +37,20 @@
 .rd-chevron{flex-shrink:0;color:#94a3b8;transition:transform .2s}
 .rd-chevron-open{transform:rotate(180deg)}
 
+/* Export action link (shared by set-level and form-level) */
+.rd-export-link{flex-shrink:0;display:flex;align-items:center;gap:.3rem;padding:.5rem .875rem;font-size:.6875rem;font-weight:600;color:#94a3b8;text-decoration:none;border-left:1px solid #f1f5f9;white-space:nowrap;transition:background .15s,color .15s}
+.rd-export-link:hover{background:#f8fafc;color:#4f46e5}
+.rd-export-link svg{flex-shrink:0}
+
 /* Forms list */
-.rd-forms{display:none;border-top:1px solid #f1f5f9}
+.rd-forms{display:none}
 .rd-forms.is-open{display:block}
 .rd-form-empty{padding:.875rem 1.5rem;font-size:.875rem;color:#94a3b8}
 .rd-form-list{border-top:1px solid #f1f5f9}
 .rd-form-row{border-bottom:1px solid #f1f5f9}
 .rd-form-row:last-child{border-bottom:none}
-.rd-form-btn{width:100%;display:flex;align-items:center;gap:.875rem;padding:.75rem 1.5rem;text-align:left;background:none;border:none;cursor:pointer;transition:background .15s}
+.rd-form-head{display:flex;align-items:stretch}
+.rd-form-btn{flex:1;display:flex;align-items:center;gap:.875rem;padding:.75rem 1.5rem;text-align:left;background:none;border:none;cursor:pointer;transition:background .15s}
 .rd-form-btn:hover{background:#f8fafc}
 .rd-form-badge{flex-shrink:0;width:1.5rem;height:1.5rem;border-radius:9999px;display:flex;align-items:center;justify-content:center}
 .rd-form-badge-done{background:#d1fae5}
@@ -150,6 +157,7 @@ function rdPending(names) {
             <div class="rd-card" x-data="rdSet({{ $isOpen ? 'true' : 'false' }})">
 
                 {{-- Release set header --}}
+                <div class="rd-card-top" :class="open && 'has-sep'">
                 <button
                     type="button"
                     class="rd-card-btn"
@@ -185,6 +193,15 @@ function rdPending(names) {
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
                     </svg>
                 </button>
+                <a href="{{ route('admin.release-sets.export', $set) }}"
+                   class="rd-export-link"
+                   title="Export all submissions (.xlsx)">
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                    </svg>
+                    Export
+                </a>
+                </div>
 
                 {{-- Forms list --}}
                 <div :class="open ? 'rd-forms is-open' : 'rd-forms'">
@@ -203,7 +220,8 @@ function rdPending(names) {
 
                                 <div class="rd-form-row" x-data="rdForm()">
 
-                                    {{-- Form row button --}}
+                                    {{-- Form row header --}}
+                                    <div class="rd-form-head">
                                     <button
                                         type="button"
                                         class="rd-form-btn"
@@ -254,6 +272,15 @@ function rdPending(names) {
                                             <div class="rd-form-spacer"></div>
                                         @endif
                                     </button>
+                                    <a href="{{ route('admin.releases.export', $release) }}"
+                                       class="rd-export-link"
+                                       title="Export form submissions (.xlsx)">
+                                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                                        </svg>
+                                        Export
+                                    </a>
+                                    </div>
 
                                     {{-- Pending participants --}}
                                     @if ($fi['pending']->isNotEmpty())

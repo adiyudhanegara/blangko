@@ -3,11 +3,11 @@
 namespace App\Exports\Concerns;
 
 use App\Models\FormExportTemplate;
-use App\Services\SubmissionExporter;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Color;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Font;
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
@@ -57,6 +57,7 @@ trait ExportsSubmissionSheet
         $lastColLetter = $totalCols > 0
             ? Coordinate::stringFromColumnIndex($totalCols)
             : 'A';
+        $lastDataRow   = $sheet->getHighestRow();
 
         // ── Image row heights ──────────────────────────────────────────────
         foreach ($this->exporter->getImageRows() as $rowNum) {
@@ -74,20 +75,61 @@ trait ExportsSubmissionSheet
             ]);
         }
 
-        // ── Template-driven header section ─────────────────────────────────
-        if ($template) {
-            $this->applyTemplateStyles($sheet, $template, $headerRow, $lastColLetter, $totalCols);
+        // ── Solid black borders on the full table (header + all data rows) ─
+        if ($lastDataRow >= $headerRow && $totalCols > 0) {
+            $sheet->getStyle("A{$headerRow}:{$lastColLetter}{$lastDataRow}")->applyFromArray([
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => Border::BORDER_THIN,
+                        'color'       => ['argb' => 'FF000000'],
+                    ],
+                ],
+            ]);
         }
 
-        // ── Auto-size all columns ──────────────────────────────────────────
-        for ($col = 1; $col <= max(1, $totalCols); $col++) {
-            $sheet->getColumnDimensionByColumn($col)->setAutoSize(true);
+        // ── Template-driven formatting (title, subtitle, header, data rows) ─
+        if ($template) {
+            $this->applyTemplateStyles(
+                $sheet, $template, $headerRow, $lastColLetter, $lastDataRow
+            );
+        }
+
+        // ── Column widths ──────────────────────────────────────────────────
+        if ($template) {
+            // Width driven by data content so long header labels don't bloat columns.
+            // Headers use wrapText so they wrap within the data-driven width.
+            $dataStart = $this->exporter->getDataStartRow();
+            for ($col = 1; $col <= max(1, $totalCols); $col++) {
+                $maxLen = 0;
+                for ($row = $dataStart; $row <= $lastDataRow; $row++) {
+                    $val = (string) $sheet->getCellByColumnAndRow($col, $row)->getValue();
+                    foreach (explode("\n", $val) as $line) {
+                        $maxLen = max($maxLen, mb_strlen($line));
+                    }
+                }
+                $width = min(35, max(8, (int) ceil($maxLen * 1.15) + 2));
+                $sheet->getColumnDimensionByColumn($col)->setAutoSize(false);
+                $sheet->getColumnDimensionByColumn($col)->setWidth($width);
+            }
+        } else {
+            for ($col = 1; $col <= max(1, $totalCols); $col++) {
+                $sheet->getColumnDimensionByColumn($col)->setAutoSize(true);
+            }
+        }
+
+        // ── Signature (after width loop so fixed width sticks) ─────────────
+        if ($template) {
+            $this->applySignature($sheet, $template, $lastDataRow, $totalCols);
         }
 
         // ── Return row-level style declarations ────────────────────────────
         return [
             $headerRow => [
                 'font' => ['bold' => true],
+                'fill' => [
+                    'fillType'   => Fill::FILL_SOLID,
+                    'startColor' => ['argb' => 'FFD8D8D8'],
+                ],
             ],
         ];
     }
@@ -99,7 +141,7 @@ trait ExportsSubmissionSheet
         FormExportTemplate $template,
         int $headerRow,
         string $lastColLetter,
-        int $totalCols,
+        int $lastDataRow,
     ): void {
         // Row 1 — title: merge across all columns, bold + underline + centered
         $sheet->mergeCells("A1:{$lastColLetter}1");
@@ -123,43 +165,32 @@ trait ExportsSubmissionSheet
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT],
         ]);
 
-        // Header row — bold, centered, wrapped, thin border
+        // Header row — centered, wrapped, gray fill (borders already applied globally)
         $headerRange = "A{$headerRow}:{$lastColLetter}{$headerRow}";
         $sheet->getStyle($headerRange)->applyFromArray([
             'font'      => ['bold' => true],
+            'fill'      => [
+                'fillType'   => Fill::FILL_SOLID,
+                'startColor' => ['argb' => 'FFD8D8D8'],
+            ],
             'alignment' => [
                 'horizontal' => Alignment::HORIZONTAL_CENTER,
                 'vertical'   => Alignment::VERTICAL_CENTER,
                 'wrapText'   => true,
             ],
-            'borders'   => [
-                'allBorders' => ['borderStyle' => Border::BORDER_THIN],
-            ],
         ]);
         $sheet->getRowDimension($headerRow)->setRowHeight(-1); // auto for wrapped text
 
-        // Data rows — wrapped text, top-aligned, light borders
-        $dataStart   = $this->exporter->getDataStartRow();
-        $lastDataRow = $sheet->getHighestRow();
-
+        // Data rows — wrapped text, top-aligned (borders already applied globally)
+        $dataStart = $this->exporter->getDataStartRow();
         if ($lastDataRow >= $dataStart) {
-            $dataRange = "A{$dataStart}:{$lastColLetter}{$lastDataRow}";
-            $sheet->getStyle($dataRange)->applyFromArray([
+            $sheet->getStyle("A{$dataStart}:{$lastColLetter}{$lastDataRow}")->applyFromArray([
                 'alignment' => [
                     'wrapText' => true,
                     'vertical' => Alignment::VERTICAL_TOP,
                 ],
-                'borders'   => [
-                    'allBorders' => [
-                        'borderStyle' => Border::BORDER_THIN,
-                        'color'       => ['argb' => 'FFCCCCCC'],
-                    ],
-                ],
             ]);
         }
-
-        // Signature block below the data
-        $this->applySignature($sheet, $template, $lastDataRow, $totalCols, $lastColLetter);
     }
 
     private function applySignature(
@@ -167,36 +198,50 @@ trait ExportsSubmissionSheet
         FormExportTemplate $template,
         int $lastDataRow,
         int $totalCols,
-        string $lastColLetter,
     ): void {
         if (!$template->signature_name && !$template->signature_role) {
             return;
         }
 
-        // Place signature block in the last column (rightmost)
-        $signColLetter = $lastColLetter;
-        $signStartRow  = $lastDataRow + 3;
+        // Determine which column the signature block occupies
+        $position     = $template->signature_position ?? 'right';
+        $signColIndex = match ($position) {
+            'left'   => 1,
+            'center' => max(1, (int) ceil($totalCols / 2)),
+            default  => max(1, $totalCols), // 'right'
+        };
+        $signColLetter = Coordinate::stringFromColumnIndex($signColIndex);
+
+        // Give the signature column a generous fixed width so text is not clipped
+        $sheet->getColumnDimension($signColLetter)->setAutoSize(false);
+        $sheet->getColumnDimension($signColLetter)->setWidth(35);
+
+        $signStartRow = $lastDataRow + 3;
+        $nextRow      = $signStartRow;
 
         if ($template->signature_role) {
-            $sheet->setCellValue("{$signColLetter}{$signStartRow}", $template->signature_role);
+            $sheet->setCellValue("{$signColLetter}{$nextRow}", $template->signature_role);
+            $sheet->getStyle("{$signColLetter}{$nextRow}")->getAlignment()
+                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $nextRow++;
         }
 
-        // Leave 3 rows as a physical signature gap
-        $nameRow = $signStartRow + 3;
+        // 3-row gap for a physical signature space
+        $nextRow += 3;
 
         if ($template->signature_name) {
-            $sheet->setCellValue("{$signColLetter}{$nameRow}", $template->signature_name);
-            $sheet->getStyle("{$signColLetter}{$nameRow}")->applyFromArray([
-                'font' => ['bold' => true],
+            $sheet->setCellValue("{$signColLetter}{$nextRow}", $template->signature_name);
+            $sheet->getStyle("{$signColLetter}{$nextRow}")->applyFromArray([
+                'font'      => ['bold' => true],
+                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
             ]);
+            $nextRow++;
         }
 
         if ($template->signature_nip) {
-            $sheet->setCellValue("{$signColLetter}" . ($nameRow + 1), 'Nip. ' . $template->signature_nip);
-        }
-
-        if ($template->signature_position) {
-            $sheet->setCellValue("{$signColLetter}" . ($nameRow + 2), $template->signature_position);
+            $sheet->setCellValue("{$signColLetter}{$nextRow}", 'NIP. ' . $template->signature_nip);
+            $sheet->getStyle("{$signColLetter}{$nextRow}")->getAlignment()
+                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
         }
     }
 }

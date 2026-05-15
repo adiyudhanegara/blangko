@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\FormResource\Pages;
 use App\Models\Form;
+use App\Models\FormExportTemplate;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -12,6 +13,7 @@ use Filament\Actions\RestoreAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Forms;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\Utilities\Get;
@@ -146,6 +148,109 @@ class FormResource extends Resource
                                 ->collapsed()
                                 ->cloneable()
                                 ->columnSpanFull(),
+                        ]),
+
+                    Tab::make('Export Template')
+                        ->schema([
+                            Section::make()
+                                ->relationship('exportTemplate')
+                                ->schema([
+
+                                    // ── Report header ──────────────────────────────────────
+                                    Forms\Components\TextInput::make('title_text')
+                                        ->label('Report Title')
+                                        ->placeholder('e.g. LAPORAN DATA PENDAMPINGAN 2026')
+                                        ->maxLength(255)
+                                        ->columnSpanFull(),
+
+                                    Forms\Components\TextInput::make('subtitle_template')
+                                        ->label('Subtitle / Period Label')
+                                        ->placeholder('e.g. BULAN : {period_label}')
+                                        ->helperText('Use {period_label} as a placeholder — it will be replaced by the release set\'s period label.')
+                                        ->maxLength(255)
+                                        ->columnSpanFull(),
+
+                                    // ── Auto-number column ─────────────────────────────────
+                                    Forms\Components\Toggle::make('show_auto_number')
+                                        ->label('Show auto-number column (NO)')
+                                        ->live()
+                                        ->columnSpan(1),
+
+                                    Forms\Components\TextInput::make('auto_number_label')
+                                        ->label('Auto-number column label')
+                                        ->default('NO')
+                                        ->maxLength(50)
+                                        ->columnSpan(1)
+                                        ->visible(fn (Get $get): bool => (bool) $get('show_auto_number')),
+
+                                    // ── Participant columns ────────────────────────────────
+                                    Forms\Components\Repeater::make('participant_columns')
+                                        ->label('Participant Columns')
+                                        ->helperText('Choose which participant fields appear in the export and how they are labelled.')
+                                        ->schema([
+                                            Forms\Components\Select::make('field')
+                                                ->label('Field')
+                                                ->options([
+                                                    'name'         => 'Name',
+                                                    'nip'          => 'NIP (Employee Code)',
+                                                    'division'     => 'Division',
+                                                    'position'     => 'Position',
+                                                    'email'        => 'Email',
+                                                    'phone'        => 'Phone',
+                                                    'identifier'   => 'Identifier',
+                                                    'status'       => 'Submission Status',
+                                                    'submitted_at' => 'Submitted At',
+                                                    'updated_at'   => 'Updated At',
+                                                ])
+                                                ->required()
+                                                ->columnSpan(1),
+
+                                            Forms\Components\TextInput::make('label')
+                                                ->label('Column Label')
+                                                ->required()
+                                                ->maxLength(100)
+                                                ->columnSpan(1),
+
+                                            Forms\Components\Toggle::make('enabled')
+                                                ->label('Show')
+                                                ->default(true)
+                                                ->columnSpan(1),
+                                        ])
+                                        ->columns(3)
+                                        ->default(FormExportTemplate::defaultParticipantColumns())
+                                        ->reorderable()
+                                        ->addActionLabel('Add Column')
+                                        ->columnSpanFull(),
+
+                                    // ── Signature block ────────────────────────────────────
+                                    Forms\Components\TextInput::make('signature_role')
+                                        ->label('Signer Role / Organization Title')
+                                        ->placeholder('e.g. Katimker Kabupaten Jembrana')
+                                        ->maxLength(255)
+                                        ->columnSpanFull(),
+
+                                    Forms\Components\TextInput::make('signature_name')
+                                        ->label('Signer Name')
+                                        ->maxLength(255)
+                                        ->columnSpan(1),
+
+                                    Forms\Components\TextInput::make('signature_nip')
+                                        ->label('Signer NIP')
+                                        ->maxLength(50)
+                                        ->columnSpan(1),
+
+                                    Forms\Components\Select::make('signature_position')
+                                        ->label('Signature Block Position')
+                                        ->helperText('Where the signature block is placed horizontally on the exported sheet.')
+                                        ->options([
+                                            'left'   => 'Left',
+                                            'center' => 'Center',
+                                            'right'  => 'Right',
+                                        ])
+                                        ->default('right')
+                                        ->columnSpanFull(),
+                                ])
+                                ->columns(2),
                         ]),
                 ])
                 ->columnSpanFull(),
