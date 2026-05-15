@@ -2,18 +2,17 @@
 
 namespace App\Exports;
 
+use App\Exports\Concerns\ExportsSubmissionSheet;
 use App\Models\FormRelease;
 use App\Services\SubmissionExporter;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithDrawings;
 use Maatwebsite\Excel\Concerns\WithStyles;
-use PhpOffice\PhpSpreadsheet\Style\Color;
-use PhpOffice\PhpSpreadsheet\Style\Font;
-use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class SubmissionExport implements FromArray, WithStyles, WithDrawings
 {
+    use ExportsSubmissionSheet;
+
     private SubmissionExporter $exporter;
 
     public function __construct(private readonly FormRelease $release) {}
@@ -22,56 +21,5 @@ class SubmissionExport implements FromArray, WithStyles, WithDrawings
     {
         $this->exporter = new SubmissionExporter();
         return $this->exporter->getRows($this->release);
-    }
-
-    public function drawings(): array
-    {
-        return $this->buildDrawings($this->exporter->getImages());
-    }
-
-    public function styles(Worksheet $sheet): array
-    {
-        foreach ($this->exporter->getImageRows() as $rowNum) {
-            $sheet->getRowDimension($rowNum)->setRowHeight(65);
-        }
-
-        foreach ($this->exporter->getUrlCells() as $uc) {
-            $sheet->getCell($uc['cell'])->getHyperlink()->setUrl($uc['url']);
-            $sheet->getStyle($uc['cell'])->applyFromArray([
-                'font' => [
-                    'color'     => ['argb' => Color::COLOR_BLUE],
-                    'underline' => Font::UNDERLINE_SINGLE,
-                ],
-            ]);
-        }
-
-        return [
-            1 => ['font' => ['bold' => true]],
-        ];
-    }
-
-    private function buildDrawings(array $images): array
-    {
-        $drawings = [];
-
-        foreach ($images as $img) {
-            if (!file_exists($img['path'])) {
-                continue;
-            }
-
-            $drawing = new Drawing();
-            $drawing->setName($img['name']);
-            $drawing->setDescription($img['name']);
-            $drawing->setPath($img['path']);
-            $drawing->setCoordinates($img['cell']);
-            $drawing->setHeight(80);
-            $drawing->setOffsetX(2);
-            $drawing->setOffsetY(2);
-            $drawing->getHyperlink()->setUrl($img['url']);
-
-            $drawings[] = $drawing;
-        }
-
-        return $drawings;
     }
 }

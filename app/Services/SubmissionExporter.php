@@ -1,7 +1,9 @@
 <?php
+
 namespace App\Services;
 
 use App\Models\Answer;
+use App\Models\FormExportTemplate;
 use App\Models\FormRelease;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 
@@ -12,15 +14,24 @@ class SubmissionExporter
     /** @var array<array{cell:string,path:string,name:string,url:string}> */
     private array $images = [];
 
-    /** @var array<array{cell:string,url:string}> cells that hold filename text + need a hyperlink */
+    /** @var array<array{cell:string,url:string}> */
     private array $urlCells = [];
 
-    /** @var int[] Excel row numbers that contain an image (for row-height adjustment) */
+    /** @var int[] Excel row numbers that contain an image (for height adjustment) */
     private array $imageRows = [];
 
-    public function getImages(): array   { return $this->images; }
-    public function getUrlCells(): array { return $this->urlCells; }
-    public function getImageRows(): array { return array_unique($this->imageRows); }
+    private int $tableHeaderRow = 1;
+    private int $dataStartRow   = 2;
+    private int $totalCols      = 0;
+    private ?FormExportTemplate $template = null;
+
+    public function getImages(): array              { return $this->images; }
+    public function getUrlCells(): array            { return $this->urlCells; }
+    public function getImageRows(): array           { return array_unique($this->imageRows); }
+    public function getTableHeaderRow(): int        { return $this->tableHeaderRow; }
+    public function getDataStartRow(): int          { return $this->dataStartRow; }
+    public function getTotalCols(): int             { return $this->totalCols; }
+    public function getTemplate(): ?FormExportTemplate { return $this->template; }
 
     public function getRows(FormRelease $release): array
     {
@@ -28,26 +39,71 @@ class SubmissionExporter
         $this->urlCells  = [];
         $this->imageRows = [];
 
-        $release->load(['releaseSet.divisions.participants', 'releaseQuestions.options']);
+        $release->load([
+            'form.exportTemplate',
+            'releaseSet.divisions.participants.division',
+            'releaseQuestions.options',
+        ]);
 
-        $questions  = $release->releaseQuestions;
-        $releaseSet = $release->releaseSet;
+        $this->template = $release->form?->exportTemplate;
+        $questions      = $release->releaseQuestions;
+        $releaseSet     = $release->releaseSet;
 
+        [$participantCols, $questionList] = $this->resolveColumns($questions);
+
+        $hasNo           = (bool) ($this->template?->show_auto_number);
+        $this->totalCols = ($hasNo ? 1 : 0) + count($participantCols) + count($questionList);
+
+        $rows = [];
+
+        // ── Template pre-rows ─────────────────────────────────────────────
+        if ($this->template) {
+            $blank = array_fill(0, $this->totalCols, '');
+
+            // Row 1: title
+            $titleRow    = $blank;
+            $titleRow[0] = $this->template->title_text ?? '';
+            $rows[]      = $titleRow;
+
+            // Row 2: subtitle
+            $subRow    = $blank;
+            $subRow[0] = $this->template->resolveSubtitle($releaseSet?->period_label);
+            $rows[]    = $subRow;
+
+            // Row 3: empty spacer
+            $rows[] = $blank;
+
+            $this->tableHeaderRow = 4;
+            $this->dataStartRow   = 5;
+        } else {
+            $this->tableHeaderRow = 1;
+            $this->dataStartRow   = 2;
+        }
+
+        // ── Column header row ─────────────────────────────────────────────
+        $headers = [];
+        if ($hasNo) {
+            $headers[] = $this->template->auto_number_label ?: 'NO';
+        }
+        foreach ($participantCols as $col) {
+            $headers[] = $col['label'];
+        }
+        foreach ($questionList as $q) {
+            $headers[] = $q->label;
+        }
+        $rows[] = $headers;
+
+        // ── Collect participants from divisions linked to the release set ──
         $participants = $releaseSet
-            ? $releaseSet->divisions->flatMap(fn ($d) => $d->participants->map(function ($p) use ($d) {
-                $p->division_name = $d->name;
-                return $p;
-            }))->unique('id')
+            ? $releaseSet->divisions
+                ->flatMap(fn ($d) => $d->participants->map(function ($p) use ($d) {
+                    $p->division_name = $d->name;
+                    return $p;
+                }))
+                ->unique('id')
             : collect();
 
         $isMulti = $release->allowsMultipleSubmissions();
-
-        $headers = ['Name', 'Email', 'Phone', 'Division', 'Status', 'Submitted At'];
-        foreach ($questions as $q) {
-            $headers[] = $q->label;
-        }
-
-        $rows = [$headers];
 
         if ($isMulti) {
             $submissions = $release->submissions()
@@ -56,23 +112,19 @@ class SubmissionExporter
                 ->orderBy('submitted_at')
                 ->get();
 
-            $excelRow = 2;
+            $autoNum = 1;
             foreach ($submissions as $submission) {
-                $p   = $submission->participant;
-                $row = [
-                    $p->name,
-                    $p->email,
-                    $p->phone,
-                    $p->division?->name ?? '',
-                    $submission->status,
-                    $submission->submitted_at?->format('Y-m-d H:i:s') ?? '',
-                ];
-
+                $excelRow  = count($rows) + 1;
                 $answerMap = $submission->answers->keyBy('release_question_id');
-                $this->appendAnswerCells($row, $questions, $answerMap, $excelRow);
-
-                $rows[] = $row;
-                $excelRow++;
+                $rows[]    = $this->buildDataRow(
+                    $submission->participant,
+                    $submission,
+                    $participantCols,
+                    $questionList,
+                    $answerMap,
+                    $excelRow,
+                    $hasNo ? $autoNum++ : null,
+                );
             }
         } else {
             $submissionMap = $release->submissions()
@@ -87,60 +139,111 @@ class SubmissionExporter
                 ->get()
                 ->keyBy('participant_id');
 
-            $excelRow = 2;
+            $autoNum = 1;
             foreach ($participants as $participant) {
                 $submission = $submissionMap->get($participant->id)
                            ?? $draftMap->get($participant->id);
 
-                $row = [
-                    $participant->name,
-                    $participant->email,
-                    $participant->phone,
-                    $participant->division_name ?? '',
-                    $submission?->status ?? 'not started',
-                    $submission?->submitted_at?->format('Y-m-d H:i:s') ?? '',
-                ];
+                $excelRow  = count($rows) + 1;
+                $answerMap = $submission
+                    ? $submission->answers->keyBy('release_question_id')
+                    : collect();
 
-                if ($submission) {
-                    $answerMap = $submission->answers->keyBy('release_question_id');
-                    $this->appendAnswerCells($row, $questions, $answerMap, $excelRow);
-                } else {
-                    foreach ($questions as $q) {
-                        $row[] = '';
-                    }
-                }
-
-                $rows[] = $row;
-                $excelRow++;
+                $rows[] = $this->buildDataRow(
+                    $participant,
+                    $submission,
+                    $participantCols,
+                    $questionList,
+                    $answerMap,
+                    $excelRow,
+                    $hasNo ? $autoNum++ : null,
+                );
             }
         }
 
         return $rows;
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────
+    // ── Column resolution ──────────────────────────────────────────────────
 
-    private function appendAnswerCells(array &$row, $questions, $answerMap, int $excelRow): void
+    private function resolveColumns($questions): array
     {
-        $qColIndex = 0; // fixed cols A-F (1-6), questions start at G (7)
+        if (!$this->template) {
+            // Default: fixed metadata columns; questions start at column G
+            $participantCols = [
+                ['field' => 'id',           'label' => 'Submission ID'],
+                ['field' => 'name',         'label' => 'Participant Name'],
+                ['field' => 'nip',          'label' => 'Participant Code'],
+                ['field' => 'status',       'label' => 'Status'],
+                ['field' => 'submitted_at', 'label' => 'Submitted At'],
+                ['field' => 'updated_at',   'label' => 'Updated At'],
+            ];
+            return [$participantCols, $questions->all()];
+        }
 
-        foreach ($questions as $q) {
+        $configured = $this->template->participant_columns
+            ?? FormExportTemplate::defaultParticipantColumns();
+
+        $enabled = array_values(array_filter($configured, fn ($c) => $c['enabled'] ?? false));
+
+        return [$enabled, $questions->all()];
+    }
+
+    // ── Data row builder ───────────────────────────────────────────────────
+
+    private function buildDataRow(
+        $participant,
+        $submission,
+        array $participantCols,
+        array $questionList,
+        $answerMap,
+        int $excelRow,
+        ?int $autoNum,
+    ): array {
+        $row = [];
+
+        if ($autoNum !== null) {
+            $row[] = $autoNum;
+        }
+
+        foreach ($participantCols as $col) {
+            $row[] = match ($col['field']) {
+                'id'           => $submission?->id ?? '',
+                'name'         => $participant?->name ?? '',
+                'email'        => $participant?->email ?? '',
+                'phone'        => $participant?->phone ?? '',
+                'division'     => $participant?->division?->name ?? $participant?->division_name ?? '',
+                'identifier'   => $participant?->identifier ?? '',
+                'nip'          => $participant?->nip ?? '',
+                'position'     => $participant?->position ?? '',
+                'status'       => $submission?->status ?? 'not started',
+                'submitted_at' => $submission?->submitted_at?->format('Y-m-d H:i:s') ?? '',
+                'updated_at'   => $submission?->updated_at?->format('Y-m-d H:i:s') ?? '',
+                default        => '',
+            };
+        }
+
+        // 1-based column index where question columns begin
+        $firstQColIdx = count($row) + 1;
+
+        foreach ($questionList as $qIdx => $q) {
             $answer = $answerMap->get($q->id);
 
             if ($q->type === 'file' && $answer) {
-                $cellRef = Coordinate::stringFromColumnIndex(7 + $qColIndex) . $excelRow;
+                $cellRef = Coordinate::stringFromColumnIndex($firstQColIdx + $qIdx) . $excelRow;
                 $row[]   = $this->buildFileCell($answer, $cellRef);
             } else {
                 $row[] = $answer ? $answer->display_value : '';
             }
-
-            $qColIndex++;
         }
+
+        return $row;
     }
+
+    // ── File cell handling ─────────────────────────────────────────────────
 
     private function buildFileCell(Answer $answer, string $cellRef): string
     {
-        // ── Single file ───────────────────────────────────────────────
         if ($answer->file_path) {
             $absPath = storage_path('app/' . $answer->file_path);
             $ext     = strtolower(pathinfo($absPath, PATHINFO_EXTENSION));
@@ -148,21 +251,17 @@ class SubmissionExporter
             $url     = route('admin.file.serve', $answer->id);
 
             if (file_exists($absPath) && in_array($ext, self::$imageExts, true)) {
-                // Image → Drawing (floats over cell) + hyperlink on the drawing
-                $this->images[]    = compact('cellRef', 'absPath', 'name', 'url') + ['cell' => $cellRef, 'path' => $absPath];
+                $this->images[]    = ['cell' => $cellRef, 'path' => $absPath, 'name' => $name, 'url' => $url];
                 $this->imageRows[] = $this->rowNum($cellRef);
-                return ''; // cell is empty; image sits on top
+                return '';
             }
 
-            // Non-image → filename text + Excel hyperlink
             $this->urlCells[] = ['cell' => $cellRef, 'url' => $url];
             return $name;
         }
 
-        // ── Multiple files ────────────────────────────────────────────
         if (!empty($answer->file_paths)) {
-            // Cell shows all filenames; hyperlink points to first file
-            $names   = [];
+            $names    = [];
             $firstUrl = null;
 
             foreach ($answer->file_paths as $idx => $f) {
