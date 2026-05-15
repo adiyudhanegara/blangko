@@ -25,7 +25,10 @@ class PublicReleaseController extends Controller
         }
 
         if (session('blangko_participant_id') && session('blangko_release_set_id') == $set->id) {
-            return redirect()->route('release.forms', $token);
+            if (Participant::find(session('blangko_participant_id'))) {
+                return redirect()->route('release.forms', $token);
+            }
+            session()->forget(['blangko_participant_id', 'blangko_release_set_id']);
         }
 
         return view('livewire.public.release-set-entry-page', ['releaseSet' => $set]);
@@ -47,7 +50,9 @@ class PublicReleaseController extends Controller
             session(['blangko_participant_id' => $participant->id]);
         }
 
-        if (!session('blangko_participant_id')) {
+        $participantId = session('blangko_participant_id');
+        if (!$participantId || !Participant::find($participantId)) {
+            session()->forget(['blangko_participant_id', 'blangko_release_set_id']);
             return redirect()->route('release.show', $token);
         }
 
