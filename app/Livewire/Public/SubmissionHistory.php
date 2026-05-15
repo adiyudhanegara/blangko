@@ -62,6 +62,19 @@ class SubmissionHistory extends Component
             ->get();
     }
 
+    public function deleteDraft(int $submissionId): void
+    {
+        $submission = Submission::where('id', $submissionId)
+            ->where('participant_id', session('blangko_participant_id'))
+            ->where('form_release_id', $this->release->id)
+            ->where('status', 'draft')
+            ->firstOrFail();
+
+        $submission->delete();
+
+        unset($this->submissions); // bust the computed cache
+    }
+
     public function addNew(): void
     {
         $token     = $this->release->releaseSet->public_token;

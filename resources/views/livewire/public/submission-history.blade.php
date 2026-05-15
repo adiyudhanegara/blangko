@@ -2,7 +2,7 @@
 
     {{-- Header --}}
     <div class="rounded-2xl bg-white shadow-sm overflow-hidden border border-slate-200/60">
-        <div class="h-2.5 bg-gradient-to-r from-violet-500 to-purple-600"></div>
+        <div class="h-2.5 bg-linear-to-r from-violet-500 to-purple-600"></div>
         <div class="p-6 sm:p-8">
             <div class="flex items-center gap-3">
                 <a href="{{ route('release.forms', $release->releaseSet->public_token) }}"
@@ -96,7 +96,7 @@
                                         @endphp
                                         @if ($answer)
                                             <div class="flex gap-2 text-xs">
-                                                <dt class="shrink-0 font-medium text-slate-500 max-w-[120px] truncate">{{ $question->label }}:</dt>
+                                                <dt class="shrink-0 font-medium text-slate-500 max-w-30 truncate">{{ $question->label }}:</dt>
                                                 <dd class="text-slate-700 truncate">{{ $answer->display_value ?? $answer->value ?? '—' }}</dd>
                                             </div>
                                         @endif
@@ -114,6 +114,21 @@
                                 </svg>
                                 {{ $isDraft ? 'Edit' : 'View' }}
                             </a>
+                            @if ($isDraft)
+                                <button
+                                    wire:click="deleteDraft({{ $submission->id }})"
+                                    wire:confirm="Delete this draft? This cannot be undone."
+                                    wire:loading.attr="disabled"
+                                    wire:target="deleteDraft({{ $submission->id }})"
+                                    type="button"
+                                    class="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-medium px-3 py-1.5 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                                >
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                    </svg>
+                                    Delete Draft
+                                </button>
+                            @endif
                             <button
                                 wire:click="duplicateFrom({{ $submission->id }})"
                                 wire:loading.attr="disabled"
