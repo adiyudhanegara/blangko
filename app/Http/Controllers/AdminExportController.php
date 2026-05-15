@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Exports\DivisionImportTemplateExport;
 use App\Exports\FormImportTemplateExport;
+use App\Exports\ParticipantImportTemplateExport;
 use App\Exports\ReleaseSetExport;
 use App\Exports\SubmissionExport;
 use App\Models\Answer;
@@ -40,6 +41,11 @@ class AdminExportController extends Controller
     public function divisionImportTemplate()
     {
         return Excel::download(new DivisionImportTemplateExport(), 'division-import-template.xlsx');
+    }
+
+    public function participantImportTemplate()
+    {
+        return Excel::download(new ParticipantImportTemplateExport(), 'participant-import-template.xlsx');
     }
 
     public function serveFile(Answer $answer, int $index = -1)

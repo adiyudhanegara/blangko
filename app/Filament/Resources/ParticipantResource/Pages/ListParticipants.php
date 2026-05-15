@@ -13,6 +13,11 @@ class ListParticipants extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            Actions\Action::make('import')
+                ->label('Import from Excel')
+                ->icon('heroicon-o-arrow-up-tray')
+                ->color('gray')
+                ->url(ParticipantResource::getUrl('import')),
             Actions\CreateAction::make(),
         ];
     }

@@ -15,6 +15,8 @@ Route::middleware(['auth'])->group(function () {
         ->name('admin.form-import-template');
     Route::get('/admin/division-import-template', [AdminExportController::class, 'divisionImportTemplate'])
         ->name('admin.division-import-template');
+    Route::get('/admin/participant-import-template', [AdminExportController::class, 'participantImportTemplate'])
+        ->name('admin.participant-import-template');
     Route::get('/admin/file/{answer}/{index?}', [AdminExportController::class, 'serveFile'])
         ->name('admin.file.serve');
 });
