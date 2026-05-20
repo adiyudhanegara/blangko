@@ -17,20 +17,23 @@ class PendingAssignmentsWidget extends BaseWidget
     {
         return $table
             ->query(Participant::query()->whereNull('division_id'))
-            ->heading('Pending Division Assignments')
-            ->description('Participants who have not been assigned to a division yet.')
+            ->heading(__('admin.widget_pending_assignments'))
+            ->description(__('admin.widget_pending_assignments_desc'))
             ->columns([
-                Tables\Columns\TextColumn::make('name'),
-                Tables\Columns\TextColumn::make('email'),
-                Tables\Columns\TextColumn::make('phone'),
+                Tables\Columns\TextColumn::make('name')
+                    ->label(__('admin.pcol_name')),
+                Tables\Columns\TextColumn::make('email')
+                    ->label(__('admin.pcol_email')),
+                Tables\Columns\TextColumn::make('phone')
+                    ->label(__('admin.pcol_phone')),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
-                    ->label('Registered')
+                    ->label(__('admin.col_registered'))
                     ->sortable(),
             ])
             ->actions([
                 Action::make('assign')
-                    ->label('Assign Division')
+                    ->label(__('admin.bulk_assign_division'))
                     ->url(fn (Participant $record) => route('filament.admin.resources.participants.edit', $record))
                     ->icon('heroicon-o-pencil'),
             ]);

@@ -21,18 +21,18 @@ class ActiveReleasesWidget extends BaseWidget
                     ->where('status', 'open')
                     ->withCount('formReleases')
             )
-            ->heading('Active Release Sets')
+            ->heading(__('admin.widget_active_release_sets'))
             ->columns([
-                Tables\Columns\TextColumn::make('name')->searchable(),
-                Tables\Columns\TextColumn::make('end_at')->label('Closes')->dateTime()->sortable(),
-                Tables\Columns\TextColumn::make('form_releases_count')->label('Forms'),
+                Tables\Columns\TextColumn::make('name')->label(__('admin.col_name'))->searchable(),
+                Tables\Columns\TextColumn::make('end_at')->label(__('admin.col_closes'))->dateTime()->sortable(),
+                Tables\Columns\TextColumn::make('form_releases_count')->label(__('admin.col_forms')),
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
                     ->color('success'),
             ])
             ->actions([
                 Action::make('open-link')
-                    ->label('Public Link')
+                    ->label(__('admin.action_public_link'))
                     ->url(
                         fn (ReleaseSet $record) => route('release.show', $record->public_token),
                         shouldOpenInNewTab: true

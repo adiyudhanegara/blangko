@@ -10,11 +10,23 @@ class ReleaseDashboard extends Page
 {
     protected string $view = 'filament.pages.release-dashboard';
 
-    protected static string|\BackedEnum|null $navigationIcon  = 'heroicon-o-chart-bar';
-    protected static ?string                 $navigationLabel = 'Release Dashboard';
-    protected static string|\UnitEnum|null   $navigationGroup = 'Forms';
-    protected static ?int                    $navigationSort  = 0;
-    protected static ?string                 $title           = 'Release Dashboard';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-chart-bar';
+    protected static ?int $navigationSort = 0;
+
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.nav_release_dashboard');
+    }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.nav_form_management');
+    }
+
+    public function getTitle(): string|\Illuminate\Contracts\Support\Htmlable
+    {
+        return __('admin.nav_release_dashboard');
+    }
 
     public function getViewData(): array
     {
@@ -37,7 +49,6 @@ class ReleaseDashboard extends Page
             ->get();
 
         return $sets->map(function (ReleaseSet $set) {
-            // Unique active participants; attach division relation so view can display it
             $participants = $set->divisions
                 ->flatMap(fn ($d) => $d->participants->each(fn ($p) => $p->setRelation('division', $d)))
                 ->unique('id')

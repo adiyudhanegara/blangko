@@ -25,6 +25,17 @@
                 </svg>
             </div>
             <span class="text-base font-semibold text-slate-800 tracking-tight">Blangko</span>
+            <div class="ml-auto flex items-center gap-1">
+                <a href="{{ route('lang.switch', 'id') }}"
+                   class="px-2 py-1 text-xs font-semibold rounded-lg transition-colors {{ app()->getLocale() === 'id' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-400 hover:text-slate-600' }}">
+                    ID
+                </a>
+                <span class="text-slate-200">|</span>
+                <a href="{{ route('lang.switch', 'en') }}"
+                   class="px-2 py-1 text-xs font-semibold rounded-lg transition-colors {{ app()->getLocale() === 'en' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-400 hover:text-slate-600' }}">
+                    EN
+                </a>
+            </div>
         </div>
     </header>
 
@@ -44,9 +55,9 @@
                             </svg>
                         </div>
                         <div>
-                            <h1 class="text-xl font-bold text-slate-900">Not Open Yet</h1>
+                            <h1 class="text-xl font-bold text-slate-900">{{ __('public.not_open_yet') }}</h1>
                             <p class="mt-2 text-sm text-slate-500 leading-relaxed">
-                                This form is not accepting responses yet.<br>Please check back at the opening time.
+                                {{ __('public.not_open_desc') }}
                             </p>
                         </div>
                         @if ($releaseSet->start_at)
@@ -54,7 +65,7 @@
                                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 9v7.5" />
                                 </svg>
-                                Opens {{ $releaseSet->start_at->format('d M Y \a\t H:i') }}
+                                {{ __('public.opens_on', ['date' => $releaseSet->start_at->format('d M Y \a\t H:i')]) }}
                             </div>
                         @endif
                     </div>
@@ -69,14 +80,14 @@
                         </div>
                         <div>
                             @if ($releaseSet->status === 'cancelled')
-                                <h1 class="text-xl font-bold text-slate-900">Closed</h1>
+                                <h1 class="text-xl font-bold text-slate-900">{{ __('public.cancelled_title') }}</h1>
                                 <p class="mt-2 text-sm text-slate-500 leading-relaxed">
-                                    This submission period has been cancelled and is no longer accepting responses.
+                                    {{ __('public.cancelled_desc') }}
                                 </p>
                             @else
-                                <h1 class="text-xl font-bold text-slate-900">Submission Closed</h1>
+                                <h1 class="text-xl font-bold text-slate-900">{{ __('public.closed_title') }}</h1>
                                 <p class="mt-2 text-sm text-slate-500 leading-relaxed">
-                                    This submission period has closed and is no longer accepting new responses.
+                                    {{ __('public.closed_desc') }}
                                 </p>
                             @endif
                         </div>
@@ -85,7 +96,7 @@
                                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 9v7.5" />
                                 </svg>
-                                Closed {{ $releaseSet->end_at->format('d M Y \a\t H:i') }}
+                                {{ __('public.closed_on', ['date' => $releaseSet->end_at->format('d M Y \a\t H:i')]) }}
                             </div>
                         @endif
                     </div>
@@ -95,7 +106,7 @@
 
             {{-- Release Set context pill --}}
             <div class="rounded-xl bg-white border border-slate-200/60 shadow-sm px-5 py-4">
-                <p class="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1.5">Submission Period</p>
+                <p class="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1.5">{{ __('public.submission_period') }}</p>
                 <p class="text-sm font-semibold text-slate-800">{{ $releaseSet->name }}</p>
             </div>
 
@@ -105,7 +116,7 @@
     <!-- Footer -->
     <footer class="py-8 text-center">
         <p class="text-xs text-slate-400">
-            Powered by <span class="font-medium text-slate-500">Blangko</span> &bull; &copy; {{ date('Y') }}
+            {{ __('public.powered_by') }} <span class="font-medium text-slate-500">Blangko</span> &bull; &copy; {{ date('Y') }}
         </p>
     </footer>
 

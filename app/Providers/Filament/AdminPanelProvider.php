@@ -6,6 +6,8 @@ use App\Filament\Widgets\ActiveReleasesWidget;
 use App\Filament\Widgets\PendingAssignmentsWidget;
 use App\Filament\Widgets\StatsOverviewWidget;
 use App\Filament\Widgets\SubmissionTrendWidget;
+use App\Http\Middleware\SetLocale;
+use Filament\Actions\Action;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -52,13 +54,22 @@ class AdminPanelProvider extends PanelProvider
                 SubmissionTrendWidget::class,
             ])
             ->navigationGroups([
-                NavigationGroup::make('Form Management')
-                    ->icon('heroicon-o-document-text'),
-                NavigationGroup::make('Participants')
-                    ->icon('heroicon-o-users'),
-                NavigationGroup::make('Settings')
-                    ->icon('heroicon-o-cog-6-tooth')
+                NavigationGroup::make(fn () => __('admin.nav_form_management')),
+                NavigationGroup::make(fn () => __('admin.nav_participants')),
+                NavigationGroup::make(fn () => __('admin.nav_settings'))
                     ->collapsed(),
+            ])
+            ->userMenuItems([
+                Action::make('lang_id')
+                    ->label(fn () => __('admin.switch_to_id'))
+                    ->icon('heroicon-o-language')
+                    ->url(fn () => route('lang.switch', 'id'))
+                    ->color(fn () => app()->getLocale() === 'id' ? 'primary' : 'gray'),
+                Action::make('lang_en')
+                    ->label(fn () => __('admin.switch_to_en'))
+                    ->icon('heroicon-o-language')
+                    ->url(fn () => route('lang.switch', 'en'))
+                    ->color(fn () => app()->getLocale() === 'en' ? 'primary' : 'gray'),
             ])
             ->middleware([
                 EncryptCookies::class,
@@ -71,6 +82,7 @@ class AdminPanelProvider extends PanelProvider
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
             ])
+            ->middleware([SetLocale::class], isPersistent: true)
             ->authMiddleware([
                 Authenticate::class,
             ]);

@@ -32,6 +32,17 @@
                 </svg>
             </div>
             <span class="text-base font-semibold text-slate-800 tracking-tight">Blangko</span>
+            <div class="ml-auto flex items-center gap-1">
+                <a href="{{ route('lang.switch', 'id') }}"
+                   class="px-2 py-1 text-xs font-semibold rounded-lg transition-colors {{ app()->getLocale() === 'id' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-400 hover:text-slate-600' }}">
+                    ID
+                </a>
+                <span class="text-slate-200">|</span>
+                <a href="{{ route('lang.switch', 'en') }}"
+                   class="px-2 py-1 text-xs font-semibold rounded-lg transition-colors {{ app()->getLocale() === 'en' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-400 hover:text-slate-600' }}">
+                    EN
+                </a>
+            </div>
         </div>
     </header>
 
@@ -70,7 +81,7 @@
     <!-- Footer -->
     <footer class="py-8 text-center">
         <p class="text-xs text-slate-400">
-            Powered by <span class="font-medium text-slate-500">Blangko</span> &bull; &copy; {{ date('Y') }}
+            {{ __('public.powered_by') }} <span class="font-medium text-slate-500">Blangko</span> &bull; &copy; {{ date('Y') }}
         </p>
     </footer>
 

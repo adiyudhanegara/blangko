@@ -8,10 +8,14 @@ use Illuminate\Support\Carbon;
 
 class SubmissionTrendWidget extends ChartWidget
 {
-    protected ?string $heading = 'Submission Trend (Last 30 Days)';
     protected static ?int $sort = 4;
     protected int | string | array $columnSpan = 'full';
     protected ?string $maxHeight = '300px';
+
+    public function getHeading(): string|\Illuminate\Contracts\Support\Htmlable|null
+    {
+        return __('admin.widget_submission_trend');
+    }
 
     protected function getData(): array
     {
@@ -27,7 +31,7 @@ class SubmissionTrendWidget extends ChartWidget
         return [
             'datasets' => [
                 [
-                    'label' => 'Submissions',
+                    'label' => __('admin.chart_submissions'),
                     'data' => $days->map(fn ($d) => $counts->get($d, 0))->values()->all(),
                     'borderColor' => '#6366f1',
                     'backgroundColor' => 'rgba(99,102,241,0.1)',

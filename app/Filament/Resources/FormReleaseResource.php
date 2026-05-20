@@ -23,18 +23,29 @@ use Illuminate\Database\Eloquent\Builder;
 class FormReleaseResource extends Resource
 {
     protected static ?string $model = FormRelease::class;
-
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-rocket-launch';
-
-    protected static string|\UnitEnum|null $navigationGroup = 'Forms';
-
     protected static ?int $navigationSort = 2;
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.nav_form_management');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.nav_form_releases');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('admin.model_form_release');
+    }
 
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
             Forms\Components\Select::make('release_set_id')
-                ->label('Release Set')
+                ->label(fn () => __('admin.field_release_set'))
                 ->relationship('releaseSet', 'name')
                 ->searchable()
                 ->preload()
@@ -42,7 +53,7 @@ class FormReleaseResource extends Resource
                 ->columnSpanFull(),
 
             Forms\Components\Select::make('form_id')
-                ->label('Form')
+                ->label(fn () => __('admin.col_form'))
                 ->relationship('form', 'title')
                 ->searchable()
                 ->preload()
@@ -50,17 +61,17 @@ class FormReleaseResource extends Resource
                 ->columnSpanFull(),
 
             Forms\Components\Toggle::make('is_required')
-                ->label('Required')
+                ->label(fn () => __('admin.field_is_required'))
                 ->default(true),
 
             Forms\Components\TextInput::make('order')
-                ->label('Order')
+                ->label(fn () => __('admin.col_order'))
                 ->numeric()
                 ->default(1)
                 ->minValue(1),
 
             Forms\Components\TextInput::make('min_submissions_required')
-                ->label('Min Submissions Required')
+                ->label(fn () => __('admin.field_min_submissions_required'))
                 ->numeric()
                 ->nullable()
                 ->helperText('Leave blank to default to 1 (single submission).'),
@@ -72,17 +83,17 @@ class FormReleaseResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('releaseSet.name')
-                    ->label('Release Set')
+                    ->label(__('admin.col_release_set'))
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('form.title')
-                    ->label('Form')
+                    ->label(__('admin.col_form'))
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('releaseSet.status')
-                    ->label('Status')
+                    ->label(__('admin.col_status'))
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'scheduled' => 'warning',
@@ -92,28 +103,28 @@ class FormReleaseResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('releaseSet.end_at')
-                    ->label('Closes')
+                    ->label(__('admin.col_closes'))
                     ->dateTime()
                     ->sortable(),
 
                 Tables\Columns\IconColumn::make('is_required')
-                    ->label('Required')
+                    ->label(__('admin.col_required'))
                     ->boolean(),
 
                 Tables\Columns\TextColumn::make('submissions_count')
                     ->counts('submissions')
-                    ->label('Submissions')
+                    ->label(__('admin.col_submissions'))
                     ->alignCenter(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('releaseSet.status')
-                    ->label('Status')
+                    ->label(__('admin.col_status'))
                     ->relationship('releaseSet', 'status')
-                    ->options([
-                        'scheduled' => 'Scheduled',
-                        'open'      => 'Open',
-                        'closed'    => 'Closed',
-                        'cancelled' => 'Cancelled',
+                    ->options(fn () => [
+                        'scheduled' => __('admin.status_scheduled'),
+                        'open'      => __('admin.status_open'),
+                        'closed'    => __('admin.status_closed'),
+                        'cancelled' => __('admin.status_cancelled'),
                     ]),
 
                 Tables\Filters\SelectFilter::make('form')
@@ -127,24 +138,24 @@ class FormReleaseResource extends Resource
                 EditAction::make(),
 
                 Action::make('publish')
-                    ->label('Publish Set')
+                    ->label(fn () => __('admin.action_publish_set'))
                     ->icon('heroicon-o-rocket-launch')
                     ->color('success')
                     ->visible(fn (FormRelease $record): bool => $record->releaseSet?->status === 'scheduled')
                     ->requiresConfirmation()
-                    ->modalHeading('Publish Release Set')
-                    ->modalDescription('This will publish the entire release set, making all forms open for submissions.')
+                    ->modalHeading(fn () => __('admin.modal_publish_formrel_heading'))
+                    ->modalDescription(fn () => __('admin.modal_publish_formrel_desc'))
                     ->action(function (FormRelease $record): void {
                         ReleaseSetPublisher::publish($record->releaseSet);
 
                         Notification::make()
-                            ->title('Release set published successfully.')
+                            ->title(__('admin.notification_formrel_published'))
                             ->success()
                             ->send();
                     }),
 
                 Action::make('copy-link')
-                    ->label('Public Link')
+                    ->label(fn () => __('admin.action_public_link'))
                     ->icon('heroicon-o-link')
                     ->color('info')
                     ->url(
@@ -152,10 +163,10 @@ class FormReleaseResource extends Resource
                         shouldOpenInNewTab: true,
                     )
                     ->visible(fn (FormRelease $record): bool => $record->releaseSet?->public_token !== null)
-                    ->tooltip('Open the public submission link in a new tab'),
+                    ->tooltip(fn () => __('admin.tooltip_public_link')),
 
                 Action::make('view_submissions')
-                    ->label('Submissions')
+                    ->label(fn () => __('admin.action_view_submissions'))
                     ->icon('heroicon-o-inbox-stack')
                     ->color('gray')
                     ->url(fn (FormRelease $record): string =>
@@ -163,7 +174,7 @@ class FormReleaseResource extends Resource
                     ),
 
                 Action::make('export')
-                    ->label('Export')
+                    ->label(fn () => __('admin.action_export'))
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('gray')
                     ->url(fn (FormRelease $record): string => route('admin.releases.export', $record))

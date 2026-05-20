@@ -26,15 +26,29 @@ class FormResource extends Resource
 {
     protected static ?string $model = Form::class;
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-document-text';
-    protected static string|\UnitEnum|null $navigationGroup = 'Forms';
     protected static ?int $navigationSort = 1;
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.nav_form_management');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.nav_forms');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('admin.model_form');
+    }
 
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
             Tabs::make('form_tabs')
                 ->tabs([
-                    Tab::make('Details')
+                    Tab::make(__('admin.tab_details'))
                         ->schema([
                             Forms\Components\TextInput::make('title')
                                 ->required()
@@ -55,16 +69,16 @@ class FormResource extends Resource
                                 ->required(),
 
                             Forms\Components\Select::make('status')
-                                ->options([
-                                    'draft'     => 'Draft',
-                                    'published' => 'Published',
-                                    'archived'  => 'Archived',
+                                ->options(fn () => [
+                                    'draft'     => __('admin.status_draft'),
+                                    'published' => __('admin.status_published'),
+                                    'archived'  => __('admin.status_archived'),
                                 ])
                                 ->default('draft')
                                 ->required(),
 
                             Forms\Components\Toggle::make('allow_edit_after_submit')
-                                ->label('Allow respondents to edit after submit')
+                                ->label(fn () => __('admin.field_allow_edit_after_submit'))
                                 ->default(true),
 
                             Forms\Components\Select::make('divisions')
@@ -76,22 +90,22 @@ class FormResource extends Resource
                         ])
                         ->columns(2),
 
-                    Tab::make('Questions')
+                    Tab::make(__('admin.tab_questions'))
                         ->schema([
                             Forms\Components\Repeater::make('questions')
                                 ->relationship('questions')
                                 ->schema([
                                     Forms\Components\Select::make('type')
-                                        ->options([
-                                            'text'     => 'Text',
-                                            'textarea' => 'Textarea',
-                                            'number'   => 'Number',
-                                            'email'    => 'Email',
-                                            'date'     => 'Date',
-                                            'radio'    => 'Radio',
-                                            'checkbox' => 'Checkbox',
-                                            'select'   => 'Select',
-                                            'file'     => 'File',
+                                        ->options(fn () => [
+                                            'text'     => __('admin.qtype_text'),
+                                            'textarea' => __('admin.qtype_textarea'),
+                                            'number'   => __('admin.qtype_number'),
+                                            'email'    => __('admin.qtype_email'),
+                                            'date'     => __('admin.qtype_date'),
+                                            'radio'    => __('admin.qtype_radio'),
+                                            'checkbox' => __('admin.qtype_checkbox'),
+                                            'select'   => __('admin.qtype_select'),
+                                            'file'     => __('admin.qtype_file'),
                                         ])
                                         ->required()
                                         ->live()
@@ -108,7 +122,7 @@ class FormResource extends Resource
                                         ->columnSpan(1),
 
                                     Forms\Components\Toggle::make('is_required')
-                                        ->label('Required')
+                                        ->label(fn () => __('admin.col_required'))
                                         ->default(false)
                                         ->columnSpan(1),
 
@@ -126,7 +140,7 @@ class FormResource extends Resource
                                         ])
                                         ->columns(2)
                                         ->defaultItems(1)
-                                        ->addActionLabel('Add Option')
+                                        ->addActionLabel(fn () => __('admin.add_option'))
                                         ->reorderable()
                                         ->orderColumn('order')
                                         ->columnSpanFull()
@@ -136,7 +150,7 @@ class FormResource extends Resource
                                 ])
                                 ->columns(2)
                                 ->defaultItems(1)
-                                ->addActionLabel('Add Question')
+                                ->addActionLabel(fn () => __('admin.add_question'))
                                 ->reorderable()
                                 ->orderColumn('order')
                                 ->itemLabel(fn (array $state): ?string =>
@@ -150,102 +164,98 @@ class FormResource extends Resource
                                 ->columnSpanFull(),
                         ]),
 
-                    Tab::make('Export Template')
+                    Tab::make(__('admin.tab_export_template'))
                         ->schema([
                             Section::make()
                                 ->relationship('exportTemplate')
                                 ->schema([
 
-                                    // ── Report header ──────────────────────────────────────
                                     Forms\Components\TextInput::make('title_text')
-                                        ->label('Report Title')
+                                        ->label(fn () => __('admin.field_report_title'))
                                         ->placeholder('e.g. LAPORAN DATA PENDAMPINGAN 2026')
                                         ->maxLength(255)
                                         ->columnSpanFull(),
 
                                     Forms\Components\TextInput::make('subtitle_template')
-                                        ->label('Subtitle / Period Label')
+                                        ->label(fn () => __('admin.field_subtitle_template'))
                                         ->placeholder('e.g. BULAN : {period_label}')
                                         ->helperText('Use {period_label} as a placeholder — it will be replaced by the release set\'s period label.')
                                         ->maxLength(255)
                                         ->columnSpanFull(),
 
-                                    // ── Auto-number column ─────────────────────────────────
                                     Forms\Components\Toggle::make('show_auto_number')
-                                        ->label('Show auto-number column (NO)')
+                                        ->label(fn () => __('admin.field_show_auto_number'))
                                         ->live()
                                         ->columnSpan(1),
 
                                     Forms\Components\TextInput::make('auto_number_label')
-                                        ->label('Auto-number column label')
+                                        ->label(fn () => __('admin.field_auto_number_label'))
                                         ->default('NO')
                                         ->maxLength(50)
                                         ->columnSpan(1)
                                         ->visible(fn (Get $get): bool => (bool) $get('show_auto_number')),
 
-                                    // ── Participant columns ────────────────────────────────
                                     Forms\Components\Repeater::make('participant_columns')
-                                        ->label('Participant Columns')
+                                        ->label(fn () => __('admin.field_participant_columns'))
                                         ->helperText('Choose which participant fields appear in the export and how they are labelled.')
                                         ->schema([
                                             Forms\Components\Select::make('field')
-                                                ->label('Field')
-                                                ->options([
-                                                    'name'         => 'Name',
-                                                    'nip'          => 'NIP (Employee Code)',
-                                                    'division'     => 'Division',
-                                                    'position'     => 'Position',
-                                                    'email'        => 'Email',
-                                                    'phone'        => 'Phone',
-                                                    'identifier'   => 'Identifier',
-                                                    'status'       => 'Submission Status',
-                                                    'submitted_at' => 'Submitted At',
-                                                    'updated_at'   => 'Updated At',
+                                                ->label(fn () => __('admin.field_column_field'))
+                                                ->options(fn () => [
+                                                    'name'         => __('admin.pcol_name'),
+                                                    'nip'          => __('admin.pcol_nip'),
+                                                    'division'     => __('admin.pcol_division'),
+                                                    'position'     => __('admin.pcol_position'),
+                                                    'email'        => __('admin.pcol_email'),
+                                                    'phone'        => __('admin.pcol_phone'),
+                                                    'identifier'   => __('admin.pcol_identifier'),
+                                                    'status'       => __('admin.pcol_status'),
+                                                    'submitted_at' => __('admin.pcol_submitted_at'),
+                                                    'updated_at'   => __('admin.pcol_updated_at'),
                                                 ])
                                                 ->required()
                                                 ->columnSpan(1),
 
                                             Forms\Components\TextInput::make('label')
-                                                ->label('Column Label')
+                                                ->label(fn () => __('admin.field_column_label'))
                                                 ->required()
                                                 ->maxLength(100)
                                                 ->columnSpan(1),
 
                                             Forms\Components\Toggle::make('enabled')
-                                                ->label('Show')
+                                                ->label(fn () => __('admin.field_column_show'))
                                                 ->default(true)
                                                 ->columnSpan(1),
                                         ])
                                         ->columns(3)
                                         ->default(FormExportTemplate::defaultParticipantColumns())
                                         ->reorderable()
-                                        ->addActionLabel('Add Column')
+                                        ->addActionLabel(fn () => __('admin.add_column'))
                                         ->columnSpanFull(),
 
-                                    // ── Signature block ────────────────────────────────────
                                     Forms\Components\TextInput::make('signature_role')
-                                        ->label('Signer Role / Organization Title')
+                                        ->label(fn () => __('admin.field_signature_role'))
                                         ->placeholder('e.g. Katimker Kabupaten Jembrana')
                                         ->maxLength(255)
                                         ->columnSpanFull(),
 
                                     Forms\Components\TextInput::make('signature_name')
-                                        ->label('Signer Name')
+                                        ->label(fn () => __('admin.field_signature_name'))
                                         ->maxLength(255)
                                         ->columnSpan(1),
 
                                     Forms\Components\TextInput::make('signature_nip')
-                                        ->label('Signer NIP')
+                                        ->label(fn () => __('admin.field_signature_nip'))
                                         ->maxLength(50)
                                         ->columnSpan(1),
 
                                     Forms\Components\Select::make('signature_position')
-                                        ->label('Signature Block Position')
+                                        ->label(fn () => __('admin.field_signature_position'))
                                         ->helperText('Where the signature block is placed horizontally on the exported sheet.')
-                                        ->options([
-                                            'left'   => 'Left',
-                                            'center' => 'Center',
-                                            'right'  => 'Right',
+                                        ->options(fn () => [
+                                            'left'   => __('admin.sig_pos_left'),
+                                            'center' => __('admin.sig_pos_center'),
+                                            'right'  => __('admin.sig_pos_right'),
                                         ])
                                         ->default('right')
                                         ->columnSpanFull(),
@@ -262,10 +272,12 @@ class FormResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('title')
+                    ->label(__('admin.col_title'))
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('language')
+                    ->label(__('admin.col_language'))
                     ->badge()
                     ->formatStateUsing(fn (string $state): string => match ($state) {
                         'id' => 'ID',
@@ -274,6 +286,7 @@ class FormResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('status')
+                    ->label(__('admin.col_status'))
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'published' => 'success',
@@ -283,7 +296,7 @@ class FormResource extends Resource
 
                 Tables\Columns\TextColumn::make('questions_count')
                     ->counts('questions')
-                    ->label('Questions'),
+                    ->label(__('admin.col_questions')),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
@@ -292,10 +305,10 @@ class FormResource extends Resource
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
-                    ->options([
-                        'draft'     => 'Draft',
-                        'published' => 'Published',
-                        'archived'  => 'Archived',
+                    ->options(fn () => [
+                        'draft'     => __('admin.status_draft'),
+                        'published' => __('admin.status_published'),
+                        'archived'  => __('admin.status_archived'),
                     ]),
                 Tables\Filters\TrashedFilter::make(),
             ])

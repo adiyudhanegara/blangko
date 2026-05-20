@@ -22,7 +22,7 @@ class ImportForm extends Page
 
     public function getTitle(): string
     {
-        return 'Import Form from Excel';
+        return __('admin.import_form_title');
     }
 
     public function mount(): void
@@ -35,8 +35,8 @@ class ImportForm extends Page
         return $schema
             ->schema([
                 Forms\Components\FileUpload::make('file')
-                    ->label('Excel File (.xlsx)')
-                    ->helperText('Download the blank template, fill it in, then upload here.')
+                    ->label(fn () => __('admin.import_file_label'))
+                    ->helperText(fn () => __('admin.import_file_helper'))
                     ->acceptedFileTypes([
                         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                         'application/vnd.ms-excel',
@@ -62,7 +62,7 @@ class ImportForm extends Page
         if (!empty($result['errors'])) {
             $this->importErrors = $result['errors'];
             Notification::make()
-                ->title('Import failed — ' . count($result['errors']) . ' error(s) found')
+                ->title(__('admin.notif_form_failed', ['count' => count($result['errors'])]))
                 ->danger()
                 ->send();
             return;
@@ -71,7 +71,7 @@ class ImportForm extends Page
         $this->importErrors = [];
 
         Notification::make()
-            ->title('Form imported successfully')
+            ->title(__('admin.notif_form_imported'))
             ->success()
             ->send();
 

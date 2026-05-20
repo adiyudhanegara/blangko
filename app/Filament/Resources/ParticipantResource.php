@@ -23,8 +23,22 @@ class ParticipantResource extends Resource
 {
     protected static ?string $model = Participant::class;
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-users';
-    protected static string|\UnitEnum|null $navigationGroup = 'Master Data';
     protected static ?int $navigationSort = 2;
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.nav_participants');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.nav_participants');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('admin.model_participant');
+    }
 
     public static function form(Schema $schema): Schema
     {
@@ -44,33 +58,33 @@ class ParticipantResource extends Resource
                 ->maxLength(50),
 
             Forms\Components\Select::make('division_id')
-                ->label('Division')
+                ->label(fn () => __('admin.field_division'))
                 ->relationship('division', 'name')
                 ->searchable()
                 ->preload()
                 ->nullable(),
 
             Forms\Components\Select::make('status')
-                ->options([
-                    'active'   => 'Active',
-                    'inactive' => 'Inactive',
+                ->options(fn () => [
+                    'active'   => __('admin.status_active'),
+                    'inactive' => __('admin.status_inactive'),
                 ])
                 ->default('active')
                 ->required(),
 
             Forms\Components\TextInput::make('nip')
-                ->label('NIP (Employee Registration Number)')
+                ->label(fn () => __('admin.field_nip'))
                 ->nullable()
                 ->unique(ignoreRecord: true)
                 ->maxLength(50),
 
             Forms\Components\TextInput::make('position')
-                ->label('Position / Job Title')
+                ->label(fn () => __('admin.field_position'))
                 ->nullable()
                 ->maxLength(255),
 
             Forms\Components\TextInput::make('identifier')
-                ->label('Identifier (NIK / Employee ID)')
+                ->label(fn () => __('admin.field_identifier'))
                 ->nullable()
                 ->maxLength(255),
         ]);
@@ -80,12 +94,12 @@ class ParticipantResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')->searchable()->sortable(),
-                Tables\Columns\TextColumn::make('nip')->label('NIP')->searchable()->sortable(),
-                Tables\Columns\TextColumn::make('position')->label('Position')->sortable()->searchable()->toggleable(),
-                Tables\Columns\TextColumn::make('email')->searchable()->sortable()->toggleable(),
-                Tables\Columns\TextColumn::make('phone')->searchable()->toggleable(),
-                Tables\Columns\TextColumn::make('division.name')->label('Division')->searchable()->sortable(),
+                Tables\Columns\TextColumn::make('name')->label(__('admin.pcol_name'))->searchable()->sortable(),
+                Tables\Columns\TextColumn::make('nip')->label(__('admin.nip_short'))->searchable()->sortable(),
+                Tables\Columns\TextColumn::make('position')->label(__('admin.position_short'))->sortable()->searchable()->toggleable(),
+                Tables\Columns\TextColumn::make('email')->label(__('admin.pcol_email'))->searchable()->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('phone')->label(__('admin.pcol_phone'))->searchable()->toggleable(),
+                Tables\Columns\TextColumn::make('division.name')->label(__('admin.col_division'))->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
@@ -95,16 +109,20 @@ class ParticipantResource extends Resource
                     })
                     ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
+                    ->label(__('admin.col_created_at'))
                     ->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('division_id')
-                    ->label('Division')
+                    ->label(__('admin.col_division'))
                     ->relationship('division', 'name')
                     ->searchable()
                     ->preload(),
                 Tables\Filters\SelectFilter::make('status')
-                    ->options(['active' => 'Active', 'inactive' => 'Inactive']),
+                    ->options(fn () => [
+                        'active'   => __('admin.status_active'),
+                        'inactive' => __('admin.status_inactive'),
+                    ]),
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
@@ -117,11 +135,11 @@ class ParticipantResource extends Resource
                     DeleteBulkAction::make(),
                     RestoreBulkAction::make(),
                     BulkAction::make('assignDivision')
-                        ->label('Assign Division')
+                        ->label(fn () => __('admin.bulk_assign_division'))
                         ->icon('heroicon-o-building-office')
                         ->form([
                             Forms\Components\Select::make('division_id')
-                                ->label('Division')
+                                ->label(fn () => __('admin.field_division'))
                                 ->options(Division::query()->pluck('name', 'id'))
                                 ->required(),
                         ])

@@ -121,7 +121,7 @@ class SubmissionForm extends Component
     {
         $this->saveAnswers();
         $this->submission->update(['last_edited_at' => now()]);
-        session()->flash('message', 'Draft saved.');
+        session()->flash('message', __('public.draft_saved'));
     }
 
     public function submit(): void
@@ -136,7 +136,7 @@ class SubmissionForm extends Component
         ]);
 
         $this->submitted = true;
-        session()->flash('message', 'Form submitted successfully!');
+        session()->flash('message', __('public.submitted_success'));
     }
 
     protected function validateAnswers(): void
@@ -176,7 +176,7 @@ class SubmissionForm extends Component
                 if ($question->is_required && empty($this->existingFiles[$question->id])) {
                     $fileKey            = "fileUploads.{$question->id}";
                     $rules[$fileKey]    = 'required';
-                    $messages["{$fileKey}.required"] = "{$question->label} is required.";
+                    $messages["{$fileKey}.required"] = __('public.field_required', ['field' => $question->label]);
                 }
                 continue;
             }
@@ -191,14 +191,14 @@ class SubmissionForm extends Component
 
             if (!empty($ruleParts)) {
                 $rules[$key]                 = implode('|', $ruleParts);
-                $messages["{$key}.required"] = "{$question->label} is required.";
+                $messages["{$key}.required"] = __('public.field_required', ['field' => $question->label]);
             }
 
             // Validate "Other" free text when the Other option is selected and required
             if ($question->is_required && $this->isOtherSelected($question)) {
                 $otherKey            = "otherText.{$question->id}";
                 $rules[$otherKey]    = 'required|string|max:500';
-                $messages["{$otherKey}.required"] = "{$question->label}: please specify the \"Other\" value.";
+                $messages["{$otherKey}.required"] = __('public.other_required', ['field' => $question->label]);
             }
         }
 

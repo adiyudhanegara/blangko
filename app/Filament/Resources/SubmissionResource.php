@@ -14,9 +14,22 @@ class SubmissionResource extends Resource
 {
     protected static ?string $model = Submission::class;
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-inbox-stack';
-    protected static string|\UnitEnum|null $navigationGroup = 'Forms';
     protected static ?int $navigationSort = 3;
-    protected static ?string $navigationLabel = 'Submissions';
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.nav_form_management');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.nav_submissions');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('admin.model_submission');
+    }
 
     public static function form(Schema $schema): Schema
     {
@@ -28,23 +41,23 @@ class SubmissionResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('participant.name')
-                    ->label('Participant')
+                    ->label(__('admin.col_participant'))
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('participant.division.name')
-                    ->label('Division')
+                    ->label(__('admin.col_division'))
                     ->searchable()
                     ->sortable()
                     ->default('—'),
 
                 Tables\Columns\TextColumn::make('formRelease.releaseSet.name')
-                    ->label('Release Set')
+                    ->label(__('admin.col_release_set'))
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('formRelease.form.title')
-                    ->label('Form')
+                    ->label(__('admin.col_form'))
                     ->searchable()
                     ->sortable(),
 
@@ -58,17 +71,17 @@ class SubmissionResource extends Resource
 
                 Tables\Columns\TextColumn::make('answers_count')
                     ->counts('answers')
-                    ->label('Answers')
+                    ->label(__('admin.col_answers'))
                     ->alignCenter(),
 
                 Tables\Columns\TextColumn::make('submitted_at')
-                    ->label('Submitted')
+                    ->label(__('admin.col_submitted'))
                     ->dateTime('d M Y, H:i')
                     ->sortable()
                     ->placeholder('—'),
 
                 Tables\Columns\TextColumn::make('last_edited_at')
-                    ->label('Last Edited')
+                    ->label(__('admin.col_last_edited'))
                     ->dateTime('d M Y, H:i')
                     ->sortable()
                     ->placeholder('—')
@@ -76,19 +89,24 @@ class SubmissionResource extends Resource
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
-                    ->options(['draft' => 'Draft', 'submitted' => 'Submitted']),
+                    ->options(fn () => [
+                        'draft'     => __('admin.status_draft'),
+                        'submitted' => __('admin.col_submitted'),
+                    ]),
 
                 Tables\Filters\SelectFilter::make('form_release_id')
-                    ->label('Form')
+                    ->label(__('admin.col_form'))
                     ->options(fn () => \App\Models\FormRelease::with('form')
                         ->get()
-                        ->mapWithKeys(fn ($r) => [$r->id => $r->form?->title ?? "Release #{$r->id}"])
+                        ->mapWithKeys(fn ($r) => [
+                            $r->id => $r->form?->title ?? __('admin.release_fallback', ['id' => $r->id]),
+                        ])
                         ->toArray()
                     )
                     ->searchable(),
 
                 Tables\Filters\SelectFilter::make('division')
-                    ->label('Division')
+                    ->label(__('admin.col_division'))
                     ->relationship('participant.division', 'name')
                     ->searchable()
                     ->preload(),

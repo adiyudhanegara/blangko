@@ -22,7 +22,7 @@ class ImportParticipants extends Page
 
     public function getTitle(): string
     {
-        return 'Import Participants from Excel';
+        return __('admin.import_participants_title');
     }
 
     public function mount(): void
@@ -35,8 +35,8 @@ class ImportParticipants extends Page
         return $schema
             ->schema([
                 Forms\Components\FileUpload::make('file')
-                    ->label('Excel File (.xlsx)')
-                    ->helperText('Download the blank template, fill it in, then upload here.')
+                    ->label(fn () => __('admin.import_file_label'))
+                    ->helperText(fn () => __('admin.import_file_helper'))
                     ->acceptedFileTypes([
                         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                         'application/vnd.ms-excel',
@@ -62,21 +62,20 @@ class ImportParticipants extends Page
         if ($result['count'] === 0 && !empty($result['errors'])) {
             $this->importErrors = $result['errors'];
             Notification::make()
-                ->title('Import failed — ' . count($result['errors']) . ' error(s) found')
+                ->title(__('admin.notif_participants_failed', ['count' => count($result['errors'])]))
                 ->danger()
                 ->send();
             return;
         }
 
-        $this->importErrors = $result['errors']; // non-fatal warnings (e.g. division not found)
+        $this->importErrors = $result['errors'];
 
-        $message = "{$result['count']} participant(s) imported successfully";
-        if (!empty($result['errors'])) {
-            $message .= ' with ' . count($result['errors']) . ' warning(s)';
-        }
+        $title = !empty($result['errors'])
+            ? __('admin.notif_participants_warnings', ['count' => $result['count'], 'warnings' => count($result['errors'])])
+            : __('admin.notif_participants_imported', ['count' => $result['count']]);
 
         Notification::make()
-            ->title($message)
+            ->title($title)
             ->success()
             ->send();
 

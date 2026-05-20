@@ -24,7 +24,7 @@ class ImportDivisions extends Page
 
     public function getTitle(): string
     {
-        return 'Import Divisions from Excel';
+        return __('admin.import_divisions_title');
     }
 
     public function mount(): void
@@ -37,8 +37,8 @@ class ImportDivisions extends Page
         return $schema
             ->schema([
                 Forms\Components\FileUpload::make('file')
-                    ->label('Excel File (.xlsx)')
-                    ->helperText('Download the blank template, fill it in, then upload here.')
+                    ->label(fn () => __('admin.import_file_label'))
+                    ->helperText(fn () => __('admin.import_file_helper'))
                     ->acceptedFileTypes([
                         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                         'application/vnd.ms-excel',
@@ -62,10 +62,10 @@ class ImportDivisions extends Page
         Storage::disk('local')->delete($relativePath);
 
         if (!empty($result['errors'])) {
-            $this->importErrors   = $result['errors'];
-            $this->importedCount  = 0;
+            $this->importErrors  = $result['errors'];
+            $this->importedCount = 0;
             Notification::make()
-                ->title('Import failed — ' . count($result['errors']) . ' error(s) found')
+                ->title(__('admin.notif_divisions_failed', ['count' => count($result['errors'])]))
                 ->danger()
                 ->send();
             return;
@@ -75,7 +75,7 @@ class ImportDivisions extends Page
         $this->importedCount = $result['count'];
 
         Notification::make()
-            ->title("{$result['count']} division(s) imported successfully")
+            ->title(__('admin.notif_divisions_imported', ['count' => $result['count']]))
             ->success()
             ->send();
 

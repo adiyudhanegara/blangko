@@ -6,6 +6,15 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect('/admin'));
 
+Route::get('/lang/{locale}', function (string $locale) {
+    if (in_array($locale, ['id', 'en'], true)) {
+        session(['locale' => $locale]);
+        session()->save();
+    }
+    $back = url()->previous(url('/admin'));
+    return redirect($back);
+})->name('lang.switch');
+
 Route::middleware(['auth'])->group(function () {
     Route::get('/admin/releases/{release}/export', [AdminExportController::class, 'export'])
         ->name('admin.releases.export');

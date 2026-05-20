@@ -128,8 +128,8 @@ function rdPending(names) {
                 <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/>
             </svg>
         </div>
-        <p style="font-size:.9375rem;font-weight:600;color:#374151">No release sets yet</p>
-        <p style="font-size:.875rem;color:#94a3b8;margin-top:.25rem">Create a release set to see the dashboard.</p>
+        <p style="font-size:.9375rem;font-weight:600;color:#374151">{{ __('admin.dashboard_no_sets') }}</p>
+        <p style="font-size:.875rem;color:#94a3b8;margin-top:.25rem">{{ __('admin.dashboard_no_sets_desc') }}</p>
     </div>
 @else
     <div class="rd-stack">
@@ -171,7 +171,7 @@ function rdPending(names) {
                             <span class="rd-set-name">{{ $set->name }}</span>
                             <span class="rd-badge {{ $badgeClass }}">{{ ucfirst($set->status) }}</span>
                             @if ($set->end_at)
-                                <span class="rd-set-deadline">· closes {{ $set->end_at->format('d M Y') }}</span>
+                                <span class="rd-set-deadline">· {{ __('admin.dashboard_closes') }} {{ $set->end_at->format('d M Y') }}</span>
                             @endif
                         </div>
 
@@ -182,8 +182,8 @@ function rdPending(names) {
                             </div>
                             <span class="rd-set-stat">
                                 <strong>{{ $item['complete_forms'] }}/{{ $item['total_forms'] }}</strong>
-                                forms complete &bull;
-                                {{ $item['total'] }} participant{{ $item['total'] != 1 ? 's' : '' }}
+                                {{ __('admin.dashboard_forms_complete') }} &bull;
+                                {{ trans_choice('admin.dashboard_participant_choice', $item['total'], ['count' => $item['total']]) }}
                             </span>
                         </div>
                     </div>
@@ -195,18 +195,18 @@ function rdPending(names) {
                 </button>
                 <a href="{{ route('admin.release-sets.export', $set) }}"
                    class="rd-export-link"
-                   title="Export all submissions (.xlsx)">
+                   title="{{ __('admin.dashboard_export_all_title') }}">
                     <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
                     </svg>
-                    Export
+                    {{ __('admin.dashboard_export') }}
                 </a>
                 </div>
 
                 {{-- Forms list --}}
                 <div :class="open ? 'rd-forms is-open' : 'rd-forms'">
                     @if ($item['forms']->isEmpty())
-                        <p class="rd-form-empty">No forms in this release set.</p>
+                        <p class="rd-form-empty">{{ __('admin.dashboard_no_forms') }}</p>
                     @else
                         <div class="rd-form-list">
                             @foreach ($item['forms'] as $fi)
@@ -243,7 +243,7 @@ function rdPending(names) {
                                             <p class="rd-form-title">
                                                 {{ $release->form?->title ?? 'Form ' . $release->id }}
                                                 @unless ($release->is_required)
-                                                    <span class="rd-form-optional">(optional)</span>
+                                                    <span class="rd-form-optional">{{ __('admin.dashboard_optional') }}</span>
                                                 @endunless
                                             </p>
                                             <div class="rd-form-progress">
@@ -253,9 +253,9 @@ function rdPending(names) {
                                                 </div>
                                                 <span class="rd-form-stat {{ $fi['is_complete'] ? 'rd-form-stat-done' : '' }}">
                                                     <strong>{{ $fi['submitted_count'] }}/{{ $fi['total'] }}</strong>
-                                                    submitted
+                                                    {{ __('admin.dashboard_submitted') }}
                                                     @if ($fi['pending']->isNotEmpty())
-                                                        &bull; <span class="rd-form-pending-lbl">{{ $fi['pending']->count() }} pending</span>
+                                                        &bull; <span class="rd-form-pending-lbl">{{ $fi['pending']->count() }} {{ __('admin.dashboard_pending') }}</span>
                                                     @endif
                                                 </span>
                                             </div>
@@ -274,11 +274,11 @@ function rdPending(names) {
                                     </button>
                                     <a href="{{ route('admin.releases.export', $release) }}"
                                        class="rd-export-link"
-                                       title="Export form submissions (.xlsx)">
+                                       title="{{ __('admin.dashboard_export_form_title') }}">
                                         <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
                                         </svg>
-                                        Export
+                                        {{ __('admin.dashboard_export') }}
                                     </a>
                                     </div>
 
@@ -294,7 +294,7 @@ function rdPending(names) {
                                                      style="display:none"></div>
 
                                                 <p class="rd-pending-title">
-                                                    Not yet submitted ({{ $fi['pending']->count() }})
+                                                    {{ __('admin.dashboard_not_yet_submitted', ['count' => $fi['pending']->count()]) }}
                                                 </p>
                                                 <div class="rd-search">
                                                     <svg class="rd-search-icon" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
@@ -304,7 +304,7 @@ function rdPending(names) {
                                                         x-model="search"
                                                         type="text"
                                                         class="rd-search-input"
-                                                        placeholder="Search participant…"
+                                                        placeholder="{{ __('admin.dashboard_search_participant') }}"
                                                     />
                                                 </div>
                                                 <div class="rd-pending-grid">
@@ -326,7 +326,7 @@ function rdPending(names) {
                                                             </div>
                                                         </div>
                                                     @endforeach
-                                                    <p class="rd-no-results" x-show="!hasResults" style="display:none">No participants match.</p>
+                                                    <p class="rd-no-results" x-show="!hasResults" style="display:none">{{ __('admin.dashboard_no_participants_match') }}</p>
                                                 </div>
                                             </div>
                                         </div>

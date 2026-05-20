@@ -15,7 +15,7 @@ class ViewSubmission extends ViewRecord
 
     public function getTitle(): string
     {
-        return $this->getRecord()->participant->name . "'s Submission";
+        return __('admin.submission_title', ['name' => $this->getRecord()->participant->name]);
     }
 
     #[Computed]
@@ -38,14 +38,14 @@ class ViewSubmission extends ViewRecord
     {
         return [
             Action::make('export_this_release')
-                ->label('Export Release')
+                ->label(fn () => __('admin.action_export_release'))
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('gray')
                 ->url(fn (): string => route('admin.releases.export', $this->getRecord()->form_release_id))
                 ->openUrlInNewTab(),
 
             Action::make('back')
-                ->label('All Submissions')
+                ->label(fn () => __('admin.action_all_submissions'))
                 ->icon('heroicon-o-arrow-left')
                 ->color('gray')
                 ->url(SubmissionResource::getUrl()),

@@ -71,6 +71,12 @@ class PublicReleaseController extends Controller
             return redirect()->route('release.show', $token);
         }
 
+        // Force UI language to match the form's configured language
+        if ($formLang = $release->form?->language) {
+            app()->setLocale($formLang);
+            session(['locale' => $formLang]);
+        }
+
         $participantId = session('blangko_participant_id');
         if (!$participantId) {
             return redirect()->route('release.show', $token);

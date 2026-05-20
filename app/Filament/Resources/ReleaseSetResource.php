@@ -24,23 +24,29 @@ use Illuminate\Database\Eloquent\Builder;
 class ReleaseSetResource extends Resource
 {
     protected static ?string $model = ReleaseSet::class;
-
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-archive-box';
-
-    protected static string|\UnitEnum|null $navigationGroup = 'Forms';
-
     protected static ?int $navigationSort = 1;
 
-    protected static ?string $navigationLabel = 'Release Sets';
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.nav_form_management');
+    }
 
-    protected static ?string $modelLabel = 'Release Set';
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.nav_release_sets');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('admin.model_release_set');
+    }
 
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
 
-            // ── Identity ──────────────────────────────────────────────
-            Section::make('Details')
+            Section::make(fn () => __('admin.section_details'))
                 ->schema([
                     Forms\Components\TextInput::make('name')
                         ->required()
@@ -52,28 +58,27 @@ class ReleaseSetResource extends Resource
                         ->columnSpanFull(),
 
                     Forms\Components\TextInput::make('period_label')
-                        ->label('Period Label')
+                        ->label(fn () => __('admin.field_period_label'))
                         ->placeholder('e.g. Q2 2025')
                         ->maxLength(100),
                 ])
                 ->columns(2),
 
-            // ── Schedule ──────────────────────────────────────────────
-            Section::make('Schedule & Access')
+            Section::make(fn () => __('admin.section_schedule_access'))
                 ->schema([
                     Forms\Components\DateTimePicker::make('start_at')
-                        ->label('Opens At')
+                        ->label(fn () => __('admin.field_opens_at'))
                         ->required()
                         ->seconds(false),
 
                     Forms\Components\DateTimePicker::make('end_at')
-                        ->label('Closes At')
+                        ->label(fn () => __('admin.field_closes_at'))
                         ->required()
                         ->seconds(false)
                         ->after('start_at'),
 
                     Forms\Components\TagsInput::make('reminder_schedule')
-                        ->label('Reminder Days Before Close')
+                        ->label(fn () => __('admin.field_reminder_days'))
                         ->placeholder('e.g. 7, 3, 1')
                         ->helperText('Days before the closing date to send reminder emails.')
                         ->columnSpanFull(),
@@ -87,14 +92,13 @@ class ReleaseSetResource extends Resource
                 ])
                 ->columns(2),
 
-            // ── Forms ─────────────────────────────────────────────────
-            Section::make('Forms in This Release Set')
+            Section::make(fn () => __('admin.section_forms_in_set'))
                 ->schema([
                     Forms\Components\Repeater::make('formReleases')
                         ->relationship()
                         ->schema([
                             Forms\Components\Select::make('form_id')
-                                ->label('Form')
+                                ->label(fn () => __('admin.col_form'))
                                 ->relationship('form', 'title')
                                 ->searchable()
                                 ->preload()
@@ -102,12 +106,12 @@ class ReleaseSetResource extends Resource
                                 ->columnSpan(2),
 
                             Forms\Components\Toggle::make('is_required')
-                                ->label('Required')
+                                ->label(fn () => __('admin.col_required'))
                                 ->default(true)
                                 ->inline(false),
 
                             Forms\Components\TextInput::make('min_submissions_required')
-                                ->label('Min Submissions')
+                                ->label(fn () => __('admin.field_min_submissions'))
                                 ->numeric()
                                 ->nullable()
                                 ->helperText('Leave blank for single submission.'),
@@ -115,7 +119,7 @@ class ReleaseSetResource extends Resource
                         ->columns(4)
                         ->orderColumn('order')
                         ->reorderableWithDragAndDrop()
-                        ->addActionLabel('Add Form')
+                        ->addActionLabel(fn () => __('admin.add_form'))
                         ->mutateRelationshipDataBeforeCreateUsing(function (array $data): array {
                             $data['created_by'] = auth()->id();
                             return $data;
@@ -131,11 +135,13 @@ class ReleaseSetResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')
+                    ->label(__('admin.col_name'))
                     ->searchable()
                     ->sortable()
                     ->description(fn (ReleaseSet $r) => $r->period_label),
 
                 Tables\Columns\TextColumn::make('status')
+                    ->label(__('admin.col_status'))
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'scheduled' => 'warning',
@@ -146,33 +152,33 @@ class ReleaseSetResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('start_at')
-                    ->label('Opens')
+                    ->label(__('admin.col_opens'))
                     ->dateTime('d M Y, H:i')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('end_at')
-                    ->label('Closes')
+                    ->label(__('admin.col_closes'))
                     ->dateTime('d M Y, H:i')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('form_releases_count')
                     ->counts('formReleases')
-                    ->label('Forms')
+                    ->label(__('admin.col_forms'))
                     ->alignCenter(),
 
                 Tables\Columns\TextColumn::make('public_token')
-                    ->label('Token')
+                    ->label(__('admin.col_token'))
                     ->copyable()
-                    ->copyMessage('Token copied!')
+                    ->copyMessage(fn () => __('admin.token_copied'))
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
-                    ->options([
-                        'scheduled' => 'Scheduled',
-                        'open'      => 'Open',
-                        'closed'    => 'Closed',
-                        'cancelled' => 'Cancelled',
+                    ->options(fn () => [
+                        'scheduled' => __('admin.status_scheduled'),
+                        'open'      => __('admin.status_open'),
+                        'closed'    => __('admin.status_closed'),
+                        'cancelled' => __('admin.status_cancelled'),
                     ]),
 
                 Tables\Filters\TrashedFilter::make(),
@@ -181,37 +187,37 @@ class ReleaseSetResource extends Resource
                 EditAction::make(),
 
                 Action::make('publish')
-                    ->label('Publish')
+                    ->label(fn () => __('admin.action_publish'))
                     ->icon('heroicon-o-rocket-launch')
                     ->color('success')
                     ->visible(fn (ReleaseSet $record): bool => $record->status === 'scheduled')
                     ->requiresConfirmation()
-                    ->modalHeading('Publish Release Set')
-                    ->modalDescription('This will snapshot all forms and open the set for submissions. This cannot be undone.')
+                    ->modalHeading(fn () => __('admin.modal_publish_set_heading'))
+                    ->modalDescription(fn () => __('admin.modal_publish_set_desc'))
                     ->action(function (ReleaseSet $record): void {
                         try {
                             ReleaseSetPublisher::publish($record);
-                            Notification::make()->title('Release set published.')->success()->send();
+                            Notification::make()->title(__('admin.notification_set_published'))->success()->send();
                         } catch (\Throwable $e) {
-                            Notification::make()->title('Publish failed: ' . $e->getMessage())->danger()->send();
+                            Notification::make()->title(__('admin.notification_publish_failed', ['message' => $e->getMessage()]))->danger()->send();
                         }
                     }),
 
                 Action::make('close')
-                    ->label('Close')
+                    ->label(fn () => __('admin.action_close'))
                     ->icon('heroicon-o-lock-closed')
                     ->color('danger')
                     ->visible(fn (ReleaseSet $record): bool => $record->status === 'open')
                     ->requiresConfirmation()
-                    ->modalHeading('Close Release Set')
-                    ->modalDescription('No new submissions will be accepted after closing.')
+                    ->modalHeading(fn () => __('admin.modal_close_set_heading'))
+                    ->modalDescription(fn () => __('admin.modal_close_set_desc'))
                     ->action(function (ReleaseSet $record): void {
                         $record->update(['status' => 'closed']);
-                        Notification::make()->title('Release set closed.')->success()->send();
+                        Notification::make()->title(__('admin.notification_set_closed'))->success()->send();
                     }),
 
                 Action::make('public-link')
-                    ->label('Public Link')
+                    ->label(fn () => __('admin.action_public_link'))
                     ->icon('heroicon-o-link')
                     ->color('info')
                     ->url(
@@ -220,7 +226,7 @@ class ReleaseSetResource extends Resource
                     ),
 
                 Action::make('export')
-                    ->label('Export')
+                    ->label(fn () => __('admin.action_export'))
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('gray')
                     ->url(

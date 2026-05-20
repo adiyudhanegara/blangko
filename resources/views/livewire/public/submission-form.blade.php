@@ -26,7 +26,7 @@
                     <svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    Closes {{ $release->releaseSet->end_at->format('d M Y, H:i') }}
+                    {{ __('public.closes', ['date' => $release->releaseSet->end_at->format('d M Y, H:i')]) }}
                 </span>
             @endif
         </div>
@@ -47,9 +47,9 @@
                 </div>
 
                 <div>
-                    <h2 class="text-2xl font-bold text-slate-900">Response Submitted!</h2>
+                    <h2 class="text-2xl font-bold text-slate-900">{{ __('public.response_submitted') }}</h2>
                     <p class="mt-2 text-slate-500 text-sm leading-relaxed">
-                        Thank you for completing this form.<br>Your response has been recorded.
+                        {{ __('public.thank_you') }}
                     </p>
                 </div>
 
@@ -65,7 +65,7 @@
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                         </svg>
-                        Edit my response
+                        {{ __('public.edit_response') }}
                     </button>
                 @endif
 
@@ -85,7 +85,7 @@
         @endphp
         <div class="rounded-xl bg-white border border-slate-200/60 shadow-sm px-5 py-4">
             <div class="flex justify-between items-center mb-2.5">
-                <span class="text-xs font-medium text-slate-500">Progress</span>
+                <span class="text-xs font-medium text-slate-500">{{ __('public.your_progress_bar') }}</span>
                 <span class="text-xs font-semibold text-indigo-600">{{ $answeredCount }} / {{ $totalCount }} answered</span>
             </div>
             <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
@@ -122,7 +122,7 @@
                                         @if ($question->is_required)
                                             <span class="text-red-500 ml-0.5">*</span>
                                         @else
-                                            <span class="text-slate-400 font-normal text-xs ml-1">optional</span>
+                                            <span class="text-slate-400 font-normal text-xs ml-1">{{ __('public.optional') }}</span>
                                         @endif
                                     </label>
                                     @if ($question->help_text)
@@ -212,7 +212,7 @@
                                             <input
                                                 type="text"
                                                 wire:model.live="otherText.{{ $question->id }}"
-                                                placeholder="Please specify…"
+                                                placeholder="{{ __('public.please_specify') }}"
                                                 class="block w-full rounded-xl border border-indigo-300 bg-indigo-50/30 px-4 py-2.5 text-sm text-slate-800
                                                        placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition
                                                        @error("otherText.{$question->id}") border-red-400 @enderror"
@@ -247,7 +247,7 @@
                                             <input
                                                 type="text"
                                                 wire:model.live="otherText.{{ $question->id }}"
-                                                placeholder="Please specify…"
+                                                placeholder="{{ __('public.please_specify') }}"
                                                 class="block w-full rounded-xl border border-indigo-300 bg-indigo-50/30 px-4 py-2.5 text-sm text-slate-800
                                                        placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition
                                                        @error("otherText.{$question->id}") border-red-400 @enderror"
@@ -285,7 +285,7 @@
                                         <input
                                             type="text"
                                             wire:model.live="otherText.{{ $question->id }}"
-                                            placeholder="Please specify…"
+                                            placeholder="{{ __('public.please_specify') }}"
                                             class="block w-full rounded-xl border border-indigo-300 bg-indigo-50/30 px-4 py-2.5 text-sm text-slate-800
                                                    placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition
                                                    @error("otherText.{$question->id}") border-red-400 @enderror"
@@ -320,7 +320,7 @@
                                             this.uploadError = '';
                                             this.filenames  = Array.from(files).map(f => f.name);
                                             const onProgress = (e) => { this.progress = e.detail.progress ?? 0; };
-                                            const onError    = () => { this.uploading = false; this.filenames = []; this.uploadError = 'Upload failed. Please try again.'; };
+                                            const onError    = () => { this.uploading = false; this.filenames = []; this.uploadError = '{{ __('public.upload_failed') }}'; };
                                             const onFinish   = () => { this.uploading = false; };
                                             @if ($maxFiles > 1)
                                                 $wire.uploadMultiple('fileUploads.{{ $question->id }}', files, onFinish, onError, onProgress);
@@ -348,7 +348,7 @@
                                         <p class="text-xs text-slate-400 mt-1">
                                             {{ strtoupper(implode(', ', $types)) }}
                                             &bull; Max {{ round($maxKb / 1024, 1) }} MB
-                                            @if ($maxFiles > 1) &bull; Up to {{ $maxFiles }} files @endif
+                                            @if ($maxFiles > 1) &bull; {{ __('public.max_files', ['count' => $maxFiles]) }} @endif
                                         </p>
                                         <input
                                             type="file"
@@ -367,7 +367,7 @@
                                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                                             </svg>
-                                            Uploading… <span x-text="Math.round(progress) + '%'"></span>
+                                            {{ __('public.uploading') }} <span x-text="Math.round(progress) + '%'"></span>
                                         </div>
                                         <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
                                             <div class="h-1.5 rounded-full bg-indigo-500 transition-all duration-300"
@@ -395,7 +395,7 @@
                                     @if (!empty($existingFiles[$question->id]))
                                         <div x-show="filenames.length === 0 && !uploading"
                                              class="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2">
-                                            <p class="text-xs text-slate-400 font-medium">Currently uploaded — upload above to replace</p>
+                                            <p class="text-xs text-slate-400 font-medium">{{ __('public.file_current') }} — {{ __('public.change_file') }}</p>
                                             <div class="flex flex-wrap gap-2">
                                                 @foreach ($existingFiles[$question->id] as $ef)
                                                     <a href="{{ $ef['url'] }}" target="_blank"
@@ -475,14 +475,14 @@
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M7.5 12l4.5 4.5m0 0l4.5-4.5M12 3v13.5" />
                         </svg>
-                        Save Draft
+                        {{ __('public.save_draft') }}
                     </span>
                     <span wire:loading wire:target="saveDraft" class="flex items-center gap-1.5">
                         <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                         </svg>
-                        Saving...
+                        {{ __('public.saving') }}
                     </span>
                 </button>
 
@@ -500,14 +500,14 @@
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
                         </svg>
-                        Submit Form
+                        {{ __('public.submit_form') }}
                     </span>
                     <span wire:loading wire:target="submit" class="flex items-center gap-2">
                         <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                         </svg>
-                        Submitting...
+                        {{ __('public.submitting') }}
                     </span>
                 </button>
 

@@ -22,8 +22,22 @@ class DivisionResource extends Resource
 {
     protected static ?string $model = Division::class;
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-building-office';
-    protected static string|\UnitEnum|null $navigationGroup = 'Master Data';
     protected static ?int $navigationSort = 1;
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.nav_participants');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.nav_divisions');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('admin.model_division');
+    }
 
     public static function form(Schema $schema): Schema
     {
@@ -48,14 +62,17 @@ class DivisionResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')
+                    ->label(__('admin.col_name'))
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('slug')
+                    ->label(__('admin.col_slug'))
                     ->searchable(),
                 Tables\Columns\TextColumn::make('participants_count')
                     ->counts('participants')
-                    ->label('Participants'),
+                    ->label(__('admin.col_participants')),
                 Tables\Columns\TextColumn::make('created_at')
+                    ->label(__('admin.col_created_at'))
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),

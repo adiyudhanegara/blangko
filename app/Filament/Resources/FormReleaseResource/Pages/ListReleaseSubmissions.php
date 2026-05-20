@@ -12,7 +12,6 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
 
 class ListReleaseSubmissions extends Page implements HasTable
 {
@@ -31,9 +30,9 @@ class ListReleaseSubmissions extends Page implements HasTable
 
     public function getTitle(): string
     {
-        $setName  = $this->record->releaseSet?->name ?? 'Release #' . $this->record->id;
-        $formName = $this->record->form?->title ?? 'Form';
-        return "Submissions — {$setName} / {$formName}";
+        $setName  = $this->record->releaseSet?->name ?? __('admin.release_fallback', ['id' => $this->record->id]);
+        $formName = $this->record->form?->title ?? __('admin.col_form');
+        return __('admin.submissions_page_title', ['set' => $setName, 'form' => $formName]);
     }
 
     public function table(Table $table): Table
@@ -46,12 +45,12 @@ class ListReleaseSubmissions extends Page implements HasTable
             )
             ->columns([
                 TextColumn::make('participant.name')
-                    ->label('Participant')
+                    ->label(__('admin.col_participant'))
                     ->searchable()
                     ->sortable(),
 
                 TextColumn::make('participant.division.name')
-                    ->label('Division')
+                    ->label(__('admin.col_division'))
                     ->searchable()
                     ->default('—'),
 
@@ -65,18 +64,21 @@ class ListReleaseSubmissions extends Page implements HasTable
 
                 TextColumn::make('answers_count')
                     ->counts('answers')
-                    ->label('Answers')
+                    ->label(__('admin.col_answers'))
                     ->alignCenter(),
 
                 TextColumn::make('submitted_at')
-                    ->label('Submitted')
+                    ->label(__('admin.col_submitted'))
                     ->dateTime('d M Y, H:i')
                     ->sortable()
                     ->placeholder('—'),
             ])
             ->filters([
                 \Filament\Tables\Filters\SelectFilter::make('status')
-                    ->options(['draft' => 'Draft', 'submitted' => 'Submitted']),
+                    ->options(fn () => [
+                        'draft'     => __('admin.status_draft'),
+                        'submitted' => __('admin.col_submitted'),
+                    ]),
             ])
             ->actions([
                 \Filament\Actions\Action::make('view')
@@ -85,22 +87,22 @@ class ListReleaseSubmissions extends Page implements HasTable
                     ->url(fn (Submission $record): string => ViewSubmission::getUrl(['record' => $record->id])),
             ])
             ->defaultSort('submitted_at', 'desc')
-            ->emptyStateHeading('No submissions yet')
-            ->emptyStateDescription('Participants have not submitted responses for this release.');
+            ->emptyStateHeading(fn () => __('admin.empty_no_submissions'))
+            ->emptyStateDescription(fn () => __('admin.empty_no_submissions_desc'));
     }
 
     protected function getHeaderActions(): array
     {
         return [
             Action::make('export')
-                ->label('Export Excel')
+                ->label(fn () => __('admin.action_export_excel'))
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('gray')
                 ->url(route('admin.releases.export', $this->record))
                 ->openUrlInNewTab(),
 
             Action::make('back')
-                ->label('Back to Releases')
+                ->label(fn () => __('admin.action_back_to_releases'))
                 ->icon('heroicon-o-arrow-left')
                 ->color('gray')
                 ->url(FormReleaseResource::getUrl()),
