@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect('/admin'));
 
-Route::get('/lang/{locale}', function (string $locale) {
+Route::get('/set-locale/{locale}', function (string $locale) {
     if (in_array($locale, ['id', 'en'], true)) {
         session(['locale' => $locale]);
         session()->save();
