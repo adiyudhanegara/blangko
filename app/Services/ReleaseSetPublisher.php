@@ -28,6 +28,24 @@ class ReleaseSetPublisher
     }
 
     /**
+     * Reopen a closed ReleaseSet and snapshot any FormReleases added since it was closed.
+     */
+    public static function reopen(ReleaseSet $set): void
+    {
+        if ($set->status !== 'closed') {
+            throw new \RuntimeException("Release set #{$set->id} is not in 'closed' status.");
+        }
+
+        foreach ($set->formReleases as $release) {
+            if ($release->published_at === null) {
+                static::snapshotRelease($release);
+            }
+        }
+
+        $set->update(['status' => 'open']);
+    }
+
+    /**
      * Snapshot a single FormRelease (used when a release is added to an already-open set).
      */
     public static function snapshotRelease(FormRelease $release): void

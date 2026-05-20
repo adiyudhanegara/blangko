@@ -216,6 +216,23 @@ class ReleaseSetResource extends Resource
                         Notification::make()->title(__('admin.notification_set_closed'))->success()->send();
                     }),
 
+                Action::make('reopen')
+                    ->label(fn () => __('admin.action_reopen'))
+                    ->icon('heroicon-o-arrow-path')
+                    ->color('warning')
+                    ->visible(fn (ReleaseSet $record): bool => $record->status === 'closed')
+                    ->requiresConfirmation()
+                    ->modalHeading(fn () => __('admin.modal_reopen_set_heading'))
+                    ->modalDescription(fn () => __('admin.modal_reopen_set_desc'))
+                    ->action(function (ReleaseSet $record): void {
+                        try {
+                            ReleaseSetPublisher::reopen($record);
+                            Notification::make()->title(__('admin.notification_set_reopened'))->success()->send();
+                        } catch (\Throwable $e) {
+                            Notification::make()->title(__('admin.notification_publish_failed', ['message' => $e->getMessage()]))->danger()->send();
+                        }
+                    }),
+
                 Action::make('public-link')
                     ->label(fn () => __('admin.action_public_link'))
                     ->icon('heroicon-o-link')
