@@ -47,9 +47,15 @@ class ReleaseSetPublisher
 
     /**
      * Snapshot a single FormRelease (used when a release is added to an already-open set).
+     * Idempotent: if questions already exist, only updates published_at without duplicating.
      */
     public static function snapshotRelease(FormRelease $release): void
     {
+        if ($release->releaseQuestions()->exists()) {
+            $release->update(['published_at' => now()]);
+            return;
+        }
+
         $questions = $release->form->questions()->with('options')->get();
         $oldToNew  = [];
 

@@ -137,6 +137,21 @@ class FormReleaseResource extends Resource
             ->actions([
                 EditAction::make(),
 
+                Action::make('snapshot')
+                    ->label(fn () => __('admin.action_snapshot'))
+                    ->icon('heroicon-o-camera')
+                    ->color('warning')
+                    ->visible(fn (FormRelease $record): bool =>
+                        $record->published_at === null && $record->releaseSet?->status === 'open'
+                    )
+                    ->requiresConfirmation()
+                    ->modalHeading(fn () => __('admin.modal_snapshot_heading'))
+                    ->modalDescription(fn () => __('admin.modal_snapshot_desc'))
+                    ->action(function (FormRelease $record): void {
+                        ReleaseSetPublisher::snapshotRelease($record);
+                        Notification::make()->title(__('admin.notification_snapshotted'))->success()->send();
+                    }),
+
                 Action::make('publish')
                     ->label(fn () => __('admin.action_publish_set'))
                     ->icon('heroicon-o-rocket-launch')

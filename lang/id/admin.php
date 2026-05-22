@@ -146,6 +146,24 @@ return [
     'field_closes_at'             => 'Ditutup Pada',
     'field_reminder_days'         => 'Hari Pengingat Sebelum Tutup',
     'field_min_submissions'       => 'Min. Pengisian',
+    'field_min_submissions_hint'  => 'Kosongkan untuk satu kali pengisian.',
+    'field_inherit_dates_hint'    => 'Kosongkan untuk menggunakan tanggal set rilis.',
+    'field_snapshot_status'       => 'Status Publikasi',
+    'field_custom_dates'          => 'Tanggal Buka / Tutup Khusus',
+    'field_custom_dates_hint'     => 'Aktifkan untuk mengganti tanggal set rilis hanya untuk formulir ini.',
+    'new_form_release'            => 'Rilis Formulir Baru',
+
+    // ── Form release snapshot statuses ────────────────────────────────────
+    'status_release_published'   => 'Diterbitkan',
+    'status_release_pending'     => 'Menunggu Snapshot',
+    'status_release_unpublished' => 'Belum Diterbitkan',
+
+    // ── Snapshot action ───────────────────────────────────────────────────
+    'action_snapshot'          => 'Snapshot Pertanyaan',
+    'modal_snapshot_heading'   => 'Snapshot Pertanyaan Formulir',
+    'modal_snapshot_desc'      => 'Ini akan mengunci pertanyaan formulir saat ini ke dalam rilis ini. Pertanyaan akan dibekukan pada versi ini.',
+    'notification_snapshotted' => 'Pertanyaan berhasil di-snapshot.',
+
     'add_form'                    => 'Tambah Formulir',
     'action_publish'              => 'Terbitkan',
     'modal_publish_set_heading'   => 'Terbitkan Set Rilis',

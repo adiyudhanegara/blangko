@@ -56,7 +56,8 @@ class ReleaseDashboard extends Page
 
             $total = $participants->count();
 
-            $forms = $set->formReleases->map(function ($release) use ($participants, $total) {
+            $forms = $set->formReleases->map(function ($release) use ($participants, $total, $set) {
+                $release->setRelation('releaseSet', $set);
                 $submittedIds   = $release->submissions->pluck('participant_id')->unique();
                 $submittedCount = $submittedIds->count();
                 $pending        = $participants->filter(fn ($p) => !$submittedIds->contains($p->id))->values();

@@ -3,8 +3,10 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\ReleaseSetResource\Pages;
+use App\Models\Form;
 use App\Models\ReleaseSet;
 use App\Services\ReleaseSetPublisher;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -96,6 +98,33 @@ class ReleaseSetResource extends Resource
                 ->schema([
                     Forms\Components\Repeater::make('formReleases')
                         ->relationship()
+                        ->collapsible()
+                        ->collapsed()
+                        ->itemLabel(function (array $state): ?string {
+                            static $cache = [];
+                            $formId = $state['form_id'] ?? null;
+                            if (!$formId) {
+                                return __('admin.new_form_release');
+                            }
+                            $cache[$formId] ??= Form::find($formId)?->title ?? 'Form #' . $formId;
+                            $title = $cache[$formId];
+
+                            $status = filled($state['published_at'] ?? null)
+                                ? '✓ ' . __('admin.status_release_published')
+                                : '○ ' . __('admin.status_release_unpublished');
+
+                            $parts = [$title, $status];
+
+                            $start = filled($state['start_at'] ?? null)
+                                ? \Carbon\Carbon::parse($state['start_at'])->format('d M Y') : null;
+                            $end = filled($state['end_at'] ?? null)
+                                ? \Carbon\Carbon::parse($state['end_at'])->format('d M Y') : null;
+                            if ($start || $end) {
+                                $parts[] = ($start ?? '…') . ' – ' . ($end ?? '…');
+                            }
+
+                            return implode(' · ', $parts);
+                        })
                         ->schema([
                             Forms\Components\Select::make('form_id')
                                 ->label(fn () => __('admin.col_form'))
@@ -103,7 +132,11 @@ class ReleaseSetResource extends Resource
                                 ->searchable()
                                 ->preload()
                                 ->required()
-                                ->columnSpan(2),
+                                ->columnSpanFull(),
+
+                            // Hidden — included in $state so itemLabel can read it.
+                            // snapshotRelease() is idempotent so re-saving is safe.
+                            Forms\Components\Hidden::make('published_at'),
 
                             Forms\Components\Toggle::make('is_required')
                                 ->label(fn () => __('admin.col_required'))
@@ -114,7 +147,43 @@ class ReleaseSetResource extends Resource
                                 ->label(fn () => __('admin.field_min_submissions'))
                                 ->numeric()
                                 ->nullable()
-                                ->helperText('Leave blank for single submission.'),
+                                ->helperText(fn () => __('admin.field_min_submissions_hint')),
+
+                            TextEntry::make('_snapshot_status')
+                                ->label(fn () => __('admin.field_snapshot_status'))
+                                ->state(fn ($get) => $get('published_at')
+                                    ? '✓ ' . __('admin.status_release_published')
+                                    : __('admin.status_release_unpublished')
+                                )
+                                ->badge()
+                                ->color(fn ($get) => $get('published_at') ? 'success' : 'gray'),
+
+                            Forms\Components\Toggle::make('_use_custom_dates')
+                                ->label(fn () => __('admin.field_custom_dates'))
+                                ->helperText(fn () => __('admin.field_custom_dates_hint'))
+                                ->dehydrated(false)
+                                ->live()
+                                ->afterStateHydrated(function ($component, $get) {
+                                    $component->state(filled($get('start_at')) || filled($get('end_at')));
+                                })
+                                ->afterStateUpdated(function (bool $state, $set) {
+                                    if (!$state) {
+                                        $set('start_at', null);
+                                        $set('end_at', null);
+                                    }
+                                }),
+
+                            Forms\Components\DateTimePicker::make('start_at')
+                                ->label(fn () => __('admin.field_opens_at'))
+                                ->nullable()
+                                ->seconds(false)
+                                ->visible(fn ($get) => (bool) $get('_use_custom_dates')),
+
+                            Forms\Components\DateTimePicker::make('end_at')
+                                ->label(fn () => __('admin.field_closes_at'))
+                                ->nullable()
+                                ->seconds(false)
+                                ->visible(fn ($get) => (bool) $get('_use_custom_dates')),
                         ])
                         ->columns(4)
                         ->orderColumn('order')

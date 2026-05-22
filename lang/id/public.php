@@ -86,6 +86,8 @@ return [
     'duplicate'            => 'Duplikasi',
     'copying'              => 'Menyalin…',
 
+    'not_available'   => 'Tidak Tersedia',
+
     // Not-open page
     'not_open_yet'    => 'Belum Dibuka',
     'not_open_desc'   => 'Formulir ini belum menerima tanggapan. Silakan kembali pada waktu pembukaan.',

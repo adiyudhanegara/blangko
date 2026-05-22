@@ -61,13 +61,21 @@ class ReleaseSetFormsList extends Component
             return [$release->id => $status];
         });
 
-        // Per-participant progress: how many required forms has this participant satisfied?
-        $calculator      = app(CompletionCalculator::class);
-        $requiredReleases = $releases->where('is_required', true);
-        $completedCount   = $requiredReleases->filter(
+        // Compute participant window state per release (open / coming_soon / form_closed / locked)
+        $releaseWindows = $releases->mapWithKeys(function ($release) use ($set) {
+            $release->setRelation('releaseSet', $set);
+            return [$release->id => $release->participantWindow()];
+        });
+
+        // Per-participant progress: only count releases within their open window
+        $calculator       = app(CompletionCalculator::class);
+        $requiredReleases = $releases->where('is_required', true)->filter(
+            fn ($r) => in_array($releaseWindows[$r->id] ?? 'open', ['open', 'coming_soon'])
+        );
+        $completedCount = $requiredReleases->filter(
             fn ($r) => $calculator->isSatisfied($r, $participant)
         )->count();
-        $totalRequired    = $requiredReleases->count();
+        $totalRequired = $requiredReleases->count();
 
         $completionStats = [
             'total'      => $totalRequired,
@@ -76,7 +84,7 @@ class ReleaseSetFormsList extends Component
         ];
 
         return view('livewire.public.release-set-forms-list', compact(
-            'participant', 'releases', 'releaseStatuses', 'completionStats'
+            'participant', 'releases', 'releaseStatuses', 'releaseWindows', 'completionStats'
         ))->layout('layouts.public');
     }
 }

@@ -86,6 +86,8 @@ return [
     'duplicate'            => 'Duplicate',
     'copying'              => 'Copying…',
 
+    'not_available'   => 'Not Available',
+
     // Not-open page
     'not_open_yet'    => 'Not Open Yet',
     'not_open_desc'   => 'This form is not accepting responses yet. Please check back at the opening time.',

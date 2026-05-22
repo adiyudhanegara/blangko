@@ -146,6 +146,24 @@ return [
     'field_closes_at'             => 'Closes At',
     'field_reminder_days'         => 'Reminder Days Before Close',
     'field_min_submissions'       => 'Min Submissions',
+    'field_min_submissions_hint'  => 'Leave blank for single submission.',
+    'field_inherit_dates_hint'    => 'Leave blank to use the release set\'s date.',
+    'field_snapshot_status'       => 'Publication Status',
+    'field_custom_dates'          => 'Custom Open / Close Dates',
+    'field_custom_dates_hint'     => 'Enable to override the release set\'s dates for this form only.',
+    'new_form_release'            => 'New Form Release',
+
+    // ── Form release snapshot statuses ────────────────────────────────────
+    'status_release_published'   => 'Published',
+    'status_release_pending'     => 'Pending Snapshot',
+    'status_release_unpublished' => 'Not Published',
+
+    // ── Snapshot action ───────────────────────────────────────────────────
+    'action_snapshot'          => 'Snapshot Questions',
+    'modal_snapshot_heading'   => 'Snapshot Form Questions',
+    'modal_snapshot_desc'      => 'This will lock the current form questions into this release. Questions will be frozen to this version.',
+    'notification_snapshotted' => 'Questions snapshotted successfully.',
+
     'add_form'                    => 'Add Form',
     'action_publish'              => 'Publish',
     'modal_publish_set_heading'   => 'Publish Release Set',

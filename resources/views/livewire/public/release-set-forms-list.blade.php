@@ -62,19 +62,23 @@
     {{-- Forms list --}}
     @forelse ($releases->values() as $index => $release)
         @php
-            $status = $releaseStatuses[$release->id] ?? ['type' => 'not_started'];
-            $token  = $releaseSet->public_token;
+            $status         = $releaseStatuses[$release->id] ?? ['type' => 'not_started'];
+            $window         = $releaseWindows[$release->id]  ?? 'open';
+            $token          = $releaseSet->public_token;
+            $effectiveStart = $release->getEffectiveStartAt();
+            $effectiveEnd   = $release->getEffectiveEndAt();
         @endphp
 
         <div class="rounded-2xl bg-white shadow-sm border border-slate-200/60 overflow-hidden">
-            {{-- left accent by status --}}
+            {{-- left accent by window/status --}}
             <div class="flex">
                 <div @class([
                     'w-1 shrink-0 rounded-l-2xl',
-                    'bg-gradient-to-b from-indigo-400 to-violet-400' => $status['type'] === 'not_started',
-                    'bg-gradient-to-b from-amber-400 to-orange-400'  => $status['type'] === 'draft',
-                    'bg-gradient-to-b from-emerald-400 to-teal-500'  => $status['type'] === 'submitted',
-                    'bg-gradient-to-b from-violet-400 to-purple-500' => $status['type'] === 'multi',
+                    'bg-gradient-to-b from-slate-300 to-slate-400'   => $window === 'coming_soon' || $window === 'form_closed' || $window === 'locked',
+                    'bg-gradient-to-b from-indigo-400 to-violet-400' => $window === 'open' && $status['type'] === 'not_started',
+                    'bg-gradient-to-b from-amber-400 to-orange-400'  => $window === 'open' && $status['type'] === 'draft',
+                    'bg-gradient-to-b from-emerald-400 to-teal-500'  => $window === 'open' && $status['type'] === 'submitted',
+                    'bg-gradient-to-b from-violet-400 to-purple-500' => $window === 'open' && $status['type'] === 'multi',
                 ])></div>
 
                 <div class="flex-1 p-5 sm:p-6">
@@ -132,9 +136,37 @@
                             </div>
                         </div>
 
-                        {{-- Action buttons --}}
+                        {{-- Action buttons / window state --}}
                         <div class="shrink-0 flex flex-col gap-2 items-end">
-                            @if ($status['type'] === 'multi')
+                            @if ($window === 'coming_soon')
+                                <div class="text-right">
+                                    <span class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-slate-100 rounded-lg px-2.5 py-1">
+                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        {{ __('public.not_open_yet') }}
+                                    </span>
+                                    @if ($effectiveStart)
+                                        <p class="mt-1 text-xs text-slate-400">{{ __('public.opens_on', ['date' => $effectiveStart->format('d M Y, H:i')]) }}</p>
+                                    @endif
+                                </div>
+                            @elseif ($window === 'form_closed')
+                                <div class="text-right">
+                                    <span class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-slate-100 rounded-lg px-2.5 py-1">
+                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/>
+                                        </svg>
+                                        {{ __('public.closed_title') }}
+                                    </span>
+                                    @if ($effectiveEnd)
+                                        <p class="mt-1 text-xs text-slate-400">{{ __('public.closed_on', ['date' => $effectiveEnd->format('d M Y, H:i')]) }}</p>
+                                    @endif
+                                </div>
+                            @elseif ($window === 'locked')
+                                <span class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 bg-slate-50 rounded-lg px-2.5 py-1 border border-slate-200">
+                                    {{ __('public.not_available') }}
+                                </span>
+                            @elseif ($status['type'] === 'multi')
                                 <a href="{{ route('release.history', [$token, $release->id]) }}"
                                     class="inline-flex items-center gap-1.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold px-3.5 py-2 transition-colors">
                                     <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">

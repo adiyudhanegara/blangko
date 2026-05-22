@@ -211,11 +211,14 @@ function rdPending(names) {
                         <div class="rd-form-list">
                             @foreach ($item['forms'] as $fi)
                                 @php
-                                    $release   = $fi['release'];
-                                    $pct       = $fi['percent'];
-                                    $fillColor = $fi['is_complete'] ? 'rd-fill-emerald'
-                                               : ($pct >= 50 ? 'rd-fill-indigo' : 'rd-fill-amber');
-                                    $formId    = 'rdform-' . $release->id;
+                                    $release        = $fi['release'];
+                                    $pct            = $fi['percent'];
+                                    $fillColor      = $fi['is_complete'] ? 'rd-fill-emerald'
+                                                    : ($pct >= 50 ? 'rd-fill-indigo' : 'rd-fill-amber');
+                                    $formId         = 'rdform-' . $release->id;
+                                    $adminStatus    = $release->getAdminStatus();
+                                    $effectiveStart = $release->getEffectiveStartAt();
+                                    $effectiveEnd   = $release->getEffectiveEndAt();
                                 @endphp
 
                                 <div class="rd-form-row" x-data="rdForm()">
@@ -245,7 +248,25 @@ function rdPending(names) {
                                                 @unless ($release->is_required)
                                                     <span class="rd-form-optional">{{ __('admin.dashboard_optional') }}</span>
                                                 @endunless
+                                                {{-- Snapshot status badge --}}
+                                                @if ($adminStatus === 'pending')
+                                                    <span style="font-size:.6875rem;font-weight:500;color:#92400e;background:#fef3c7;border:1px solid #fde68a;border-radius:9999px;padding:.1rem .5rem;margin-left:.25rem">{{ __('admin.status_release_pending') }}</span>
+                                                @elseif ($adminStatus === 'unpublished')
+                                                    <span style="font-size:.6875rem;font-weight:500;color:#475569;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:9999px;padding:.1rem .5rem;margin-left:.25rem">{{ __('admin.status_release_unpublished') }}</span>
+                                                @endif
                                             </p>
+                                            {{-- Per-release effective dates --}}
+                                            @if ($effectiveStart || $effectiveEnd)
+                                                <p style="font-size:.6875rem;color:#94a3b8;margin-top:.125rem">
+                                                    @if ($effectiveStart)
+                                                        {{ __('admin.col_opens') }}: {{ $effectiveStart->format('d M Y') }}
+                                                    @endif
+                                                    @if ($effectiveStart && $effectiveEnd) &bull; @endif
+                                                    @if ($effectiveEnd)
+                                                        {{ __('admin.col_closes') }}: {{ $effectiveEnd->format('d M Y') }}
+                                                    @endif
+                                                </p>
+                                            @endif
                                             <div class="rd-form-progress">
                                                 <div class="rd-form-bar-wrap">
                                                     <div class="rd-progress-fill {{ $fillColor }}"
