@@ -90,8 +90,18 @@
 .rd-no-results{font-size:.6875rem;color:#9ca3af;text-align:center;padding:.375rem 0;grid-column:1/-1}
 /* Floating name tooltip */
 .rd-tip{position:fixed;z-index:9999;background:#1e293b;color:#f8fafc;font-size:.6875rem;font-weight:500;padding:.25rem .625rem;border-radius:.375rem;pointer-events:none;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+
+/* Tab bar */
+.rd-tab-bar{display:flex;border-bottom:1px solid #f1f5f9;padding:0 1.5rem;background:#fff}
+.rd-tab{padding:.5rem .875rem;font-size:.75rem;font-weight:500;color:#64748b;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:color .15s,border-color .15s;margin-bottom:-1px;white-space:nowrap}
+.rd-tab:hover{color:#1e293b}
+.rd-tab-active{color:#6366f1;border-bottom-color:#6366f1}
+.rd-tab-count{font-size:.6875rem;font-weight:600;background:#f1f5f9;color:#475569;border-radius:9999px;padding:.05rem .375rem;margin-left:.25rem}
+.rd-tab-count-warn{background:#fef3c7;color:#92400e}
+.rd-all-submitted{padding:.875rem 1.5rem;font-size:.8125rem;color:#10b981;display:flex;align-items:center;gap:.375rem}
 </style>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script>
 function rdSet(defaultOpen) {
     return {
@@ -102,7 +112,8 @@ function rdSet(defaultOpen) {
 function rdForm() {
     return {
         open: false,
-        toggle() { this.open = !this.open; }
+        tab: 'pending',
+        toggle() { this.open = !this.open; },
     };
 }
 function rdPending(names) {
@@ -119,7 +130,189 @@ function rdPending(names) {
         hideTip() { this.tip.show = false; },
     };
 }
+
+// ── Statistics panel ──────────────────────────────────────────────────────────
+
+function _getFrsTooltip() {
+    let el = document.getElementById('frs-global-tooltip');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'frs-global-tooltip';
+        el.className = 'frs-chart-tooltip';
+        el.style.display = 'none';
+        document.body.appendChild(el);
+    }
+    return el;
+}
+
+function _makeTooltipHandler(opts) {
+    return function({ chart, tooltip }) {
+        const el = _getFrsTooltip();
+        if (tooltip.opacity === 0) { el.style.display = 'none'; return; }
+
+        const idx = tooltip.dataPoints[0].dataIndex;
+        const opt = opts[idx];
+
+        let html = `<div class="frs-tt-head">
+            <span class="frs-tt-opt-label">${opt.label}</span>
+            <span class="frs-tt-stat">${opt.count}&nbsp;<span class="frs-tt-pct">(${opt.pct}%)</span></span>
+        </div><div class="frs-tt-divider"></div>`;
+
+        if (opt.respondents && opt.respondents.length > 0) {
+            html += '<div class="frs-tt-names">';
+            opt.respondents.forEach(name => {
+                const initial = (name || '?').charAt(0).toUpperCase();
+                html += `<div class="frs-tt-name-row"><span class="frs-tt-avatar">${initial}</span><span class="frs-tt-name-text">${name}</span></div>`;
+            });
+            html += '</div>';
+        } else {
+            html += '<div class="frs-tt-empty">No responses</div>';
+        }
+
+        el.innerHTML = html;
+        el.style.display = 'block';
+
+        const rect = chart.canvas.getBoundingClientRect();
+        const tipW = el.offsetWidth, tipH = el.offsetHeight;
+        let left = rect.left + tooltip.caretX + 14;
+        let top  = rect.top  + tooltip.caretY - tipH / 2;
+        if (left + tipW > window.innerWidth - 8)  left = rect.left + tooltip.caretX - tipW - 10;
+        if (top < 8)                               top  = 8;
+        if (top + tipH > window.innerHeight - 8)  top  = window.innerHeight - tipH - 8;
+        el.style.left = left + 'px';
+        el.style.top  = top  + 'px';
+    };
+}
+
+function frsChartQuestion(stat) {
+    return {
+        showUnused: false,
+        chart: null,
+        stat: stat,
+        build() {
+            if (this.chart) { this.chart.destroy(); this.chart = null; }
+            const canvas = this.$refs.canvas;
+            if (!canvas || typeof Chart === 'undefined') return;
+            const opts = this.stat.options;
+
+            canvas.addEventListener('mouseleave', () => {
+                const el = _getFrsTooltip();
+                if (el) el.style.display = 'none';
+            });
+
+            this.chart = new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: opts.map(o => o.label),
+                    datasets: [{
+                        data: opts.map(o => o.count),
+                        backgroundColor: opts.map(o => o.unused ? 'rgba(239,68,68,0.15)' : 'rgba(99,102,241,0.75)'),
+                        borderColor:     opts.map(o => o.unused ? 'rgba(239,68,68,0.7)'  : 'rgba(99,102,241,1)'),
+                        borderWidth: 1, borderRadius: 3,
+                    }],
+                },
+                options: {
+                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: false, external: _makeTooltipHandler(opts) },
+                    },
+                    scales: {
+                        x: { beginAtZero: true, ticks: { stepSize: 1, precision: 0, font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.05)' } },
+                        y: { ticks: { font: { size: 11 } }, grid: { display: false } },
+                    },
+                },
+            });
+        },
+    };
+}
+
+function formStats(releaseId, total) {
+    return {
+        loaded: false,
+        loading: false,
+        error: null,
+        stats: [],
+        totalSubmitted: 0,
+        total: total,
+
+        async loadStats() {
+            if (this.loaded || this.loading) return;
+            this.loading = true;
+            this.error = null;
+            try {
+                const res = await fetch(`/admin/api/release-stats/${releaseId}`, {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin',
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+                this.totalSubmitted = data.total_submitted;
+                this.stats = data.stats;
+                this.loaded = true;
+            } catch (e) {
+                this.error = 'Failed to load statistics. Please try again.';
+            }
+            this.loading = false;
+        },
+
+        get totalUnused() {
+            return this.stats.filter(s => s.options).reduce((sum, s) => sum + s.unused_count, 0);
+        },
+        get completionPct() {
+            return this.total > 0 ? Math.round(this.totalSubmitted / this.total * 100) : 0;
+        },
+    };
+}
 </script>
+
+<style>
+/* Floating chart tooltip */
+.frs-chart-tooltip{position:fixed;z-index:9999;background:#1e293b;color:#f8fafc;border-radius:.5rem;box-shadow:0 8px 24px rgba(0,0,0,.25);min-width:180px;max-width:260px;pointer-events:none;font-size:.75rem;overflow:hidden}
+.frs-tt-head{display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem;padding:.5rem .75rem}
+.frs-tt-opt-label{font-weight:600;color:#f1f5f9;flex:1;line-height:1.3;word-break:break-word}
+.frs-tt-stat{flex-shrink:0;font-weight:700;color:#fff;white-space:nowrap}
+.frs-tt-pct{font-weight:400;color:#94a3b8}
+.frs-tt-divider{height:1px;background:rgba(255,255,255,.1)}
+.frs-tt-names{padding:.375rem .5rem;max-height:180px;overflow-y:auto}
+.frs-tt-name-row{display:flex;align-items:center;gap:.375rem;padding:.2rem .25rem;border-radius:.25rem}
+.frs-tt-name-row:hover{background:rgba(255,255,255,.07)}
+.frs-tt-avatar{flex-shrink:0;width:1.25rem;height:1.25rem;border-radius:9999px;background:rgba(99,102,241,.4);display:flex;align-items:center;justify-content:center;font-size:.5625rem;font-weight:700;color:#c7d2fe}
+.frs-tt-name-text{font-size:.6875rem;color:#cbd5e1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.frs-tt-empty{padding:.375rem .75rem .5rem;font-size:.6875rem;color:#64748b;font-style:italic}
+
+/* Stats panel layout */
+.frs-wrap{padding:.875rem 1.5rem 1rem}
+.frs-loading-row{display:flex;flex-direction:column;gap:.375rem;padding:.75rem 0 1rem}
+.frs-skeleton{background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 50%,#f1f5f9 75%);background-size:200% 100%;animation:frs-shimmer 1.4s infinite;border-radius:.375rem}
+@keyframes frs-shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.frs-summary{display:flex;gap:.625rem;margin-bottom:1rem;flex-wrap:wrap}
+.frs-summary-card{flex:1;min-width:7rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:.5rem;padding:.5rem .75rem}
+.frs-summary-num{display:block;font-size:1.125rem;font-weight:700;color:#1e293b;line-height:1.2}
+.frs-summary-num.frs-warn{color:#dc2626}
+.frs-summary-lbl{display:block;font-size:.6875rem;color:#94a3b8;margin-top:.125rem}
+.frs-q-section{border:1px solid #f1f5f9;border-radius:.5rem;margin-bottom:.625rem;overflow:hidden;background:#fff}
+.frs-q-head{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:.5rem .875rem;background:#f8fafc;border-bottom:1px solid #f1f5f9;flex-wrap:wrap}
+.frs-q-meta{display:flex;align-items:center;gap:.5rem;min-width:0}
+.frs-q-num{font-size:.6875rem;font-weight:700;color:#94a3b8;flex-shrink:0}
+.frs-q-label{font-size:.8125rem;font-weight:500;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:30rem}
+.frs-q-type{font-size:.625rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#64748b;background:#e2e8f0;border-radius:.25rem;padding:.1rem .375rem;flex-shrink:0}
+.frs-q-head-right{display:flex;align-items:center;gap:.5rem;flex-shrink:0}
+.frs-answered{font-size:.75rem;color:#64748b}
+.frs-unused-badge{font-size:.6875rem;font-weight:600;color:#b45309;background:#fef3c7;border:1px solid #fde68a;border-radius:9999px;padding:.1rem .5rem;white-space:nowrap}
+.frs-chart-wrap{padding:.75rem .875rem}
+.frs-toggle-btn{display:inline-flex;align-items:center;gap:.25rem;margin-top:.5rem;font-size:.6875rem;font-weight:600;color:#6366f1;background:none;border:1px solid #e0e7ff;border-radius:.375rem;padding:.25rem .625rem;cursor:pointer;transition:background .15s,border-color .15s}
+.frs-toggle-btn:hover{background:#eef2ff;border-color:#c7d2fe}
+.frs-unused-panel{padding:.75rem .875rem}
+.frs-unused-title{font-size:.6875rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#64748b;margin-bottom:.5rem}
+.frs-unused-item{display:flex;align-items:center;gap:.5rem;padding:.3rem 0;font-size:.8125rem;color:#374151}
+.frs-unused-dot{flex-shrink:0;width:.5rem;height:.5rem;border-radius:9999px;background:#ef4444}
+.frs-count-row{padding:.625rem .875rem;display:flex;align-items:center;gap:.75rem}
+.frs-count-track{flex:1;max-width:16rem;height:.375rem;background:#f1f5f9;border-radius:9999px;overflow:hidden}
+.frs-count-fill{height:.375rem;background:#6366f1;border-radius:9999px;transition:width .4s}
+.frs-count-lbl{font-size:.75rem;color:#64748b}
+.frs-error{padding:.875rem 1.5rem;font-size:.8125rem;color:#dc2626}
+</style>
 
 @if ($releaseSets->isEmpty())
     <div class="rd-empty">
@@ -283,15 +476,11 @@ function rdPending(names) {
                                         </div>
 
                                         {{-- Expand chevron --}}
-                                        @if ($fi['pending']->isNotEmpty())
-                                            <svg width="14" height="14"
-                                                 :class="open ? 'rd-form-chevron is-open' : 'rd-form-chevron'"
-                                                 fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
-                                            </svg>
-                                        @else
-                                            <div class="rd-form-spacer"></div>
-                                        @endif
+                                        <svg width="14" height="14"
+                                             :class="open ? 'rd-form-chevron is-open' : 'rd-form-chevron'"
+                                             fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+                                        </svg>
                                     </button>
                                     <a href="{{ route('admin.releases.export', $release) }}"
                                        class="rd-export-link"
@@ -303,55 +492,193 @@ function rdPending(names) {
                                     </a>
                                     </div>
 
-                                    {{-- Pending participants --}}
-                                    @if ($fi['pending']->isNotEmpty())
-                                        <div :class="open ? 'rd-pending is-open' : 'rd-pending'">
-                                            <div x-data="rdPending({{ Js::from($fi['pending']->pluck('name')->map(fn ($n) => strtolower($n))->values()) }})">
-                                                {{-- Fixed tooltip (bypasses overflow:hidden on .rd-card) --}}
-                                                <div class="rd-tip"
-                                                     x-show="tip.show"
-                                                     x-text="tip.name"
-                                                     :style="`left:${tip.x}px;top:${tip.y}px`"
-                                                     style="display:none"></div>
+                                    {{-- Tab bar + panels (shown when expanded) --}}
+                                    <div x-show="open" style="display:none">
 
-                                                <p class="rd-pending-title">
-                                                    {{ __('admin.dashboard_not_yet_submitted', ['count' => $fi['pending']->count()]) }}
-                                                </p>
-                                                <div class="rd-search">
-                                                    <svg class="rd-search-icon" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0015.803 15.803z"/>
-                                                    </svg>
-                                                    <input
-                                                        x-model="search"
-                                                        type="text"
-                                                        class="rd-search-input"
-                                                        placeholder="{{ __('admin.dashboard_search_participant') }}"
-                                                    />
-                                                </div>
-                                                <div class="rd-pending-grid">
-                                                    @foreach ($fi['pending'] as $participant)
-                                                        <div class="rd-p-card"
-                                                             data-name="{{ strtolower($participant->name) }}"
-                                                             data-fullname="{{ $participant->name }}"
-                                                             x-show="!search || $el.dataset.name.includes(search.toLowerCase())"
-                                                             @mouseenter="showTip($el.dataset.fullname, $event)"
-                                                             @mouseleave="hideTip()">
-                                                            <div class="rd-p-avatar">
-                                                                <span class="rd-p-initial">{{ strtoupper(substr($participant->name, 0, 1)) }}</span>
-                                                            </div>
-                                                            <div style="min-width:0">
-                                                                <p class="rd-p-name">{{ $participant->name }}</p>
-                                                                @if ($participant->division)
-                                                                    <p class="rd-p-div">{{ $participant->division->name }}</p>
-                                                                @endif
-                                                            </div>
+                                        {{-- Tab bar --}}
+                                        <div class="rd-tab-bar">
+                                            <button type="button"
+                                                    class="rd-tab"
+                                                    :class="tab === 'pending' && 'rd-tab-active'"
+                                                    @click="tab = 'pending'">
+                                                Not Submitted
+                                                <span class="rd-tab-count {{ $fi['pending']->isNotEmpty() ? 'rd-tab-count-warn' : '' }}">{{ $fi['pending']->count() }}</span>
+                                            </button>
+                                            <button type="button"
+                                                    class="rd-tab"
+                                                    :class="tab === 'stats' && 'rd-tab-active'"
+                                                    @click="tab = 'stats'; $dispatch('frs-load-{{ $release->id }}')">
+                                                Statistics
+                                            </button>
+                                        </div>
+
+                                        {{-- Pending panel --}}
+                                        <div x-show="tab === 'pending'">
+                                            @if ($fi['pending']->isNotEmpty())
+                                                <div class="rd-pending is-open">
+                                                    <div x-data="rdPending({{ Js::from($fi['pending']->pluck('name')->map(fn ($n) => strtolower($n))->values()) }})">
+                                                        {{-- Fixed tooltip --}}
+                                                        <div class="rd-tip"
+                                                             x-show="tip.show"
+                                                             x-text="tip.name"
+                                                             :style="`left:${tip.x}px;top:${tip.y}px`"
+                                                             style="display:none"></div>
+
+                                                        <p class="rd-pending-title">
+                                                            {{ __('admin.dashboard_not_yet_submitted', ['count' => $fi['pending']->count()]) }}
+                                                        </p>
+                                                        <div class="rd-search">
+                                                            <svg class="rd-search-icon" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0015.803 15.803z"/>
+                                                            </svg>
+                                                            <input
+                                                                x-model="search"
+                                                                type="text"
+                                                                class="rd-search-input"
+                                                                placeholder="{{ __('admin.dashboard_search_participant') }}"
+                                                            />
                                                         </div>
-                                                    @endforeach
-                                                    <p class="rd-no-results" x-show="!hasResults" style="display:none">{{ __('admin.dashboard_no_participants_match') }}</p>
+                                                        <div class="rd-pending-grid">
+                                                            @foreach ($fi['pending'] as $participant)
+                                                                <div class="rd-p-card"
+                                                                     data-name="{{ strtolower($participant->name) }}"
+                                                                     data-fullname="{{ $participant->name }}"
+                                                                     x-show="!search || $el.dataset.name.includes(search.toLowerCase())"
+                                                                     @mouseenter="showTip($el.dataset.fullname, $event)"
+                                                                     @mouseleave="hideTip()">
+                                                                    <div class="rd-p-avatar">
+                                                                        <span class="rd-p-initial">{{ strtoupper(substr($participant->name, 0, 1)) }}</span>
+                                                                    </div>
+                                                                    <div style="min-width:0">
+                                                                        <p class="rd-p-name">{{ $participant->name }}</p>
+                                                                        @if ($participant->division)
+                                                                            <p class="rd-p-div">{{ $participant->division->name }}</p>
+                                                                        @endif
+                                                                    </div>
+                                                                </div>
+                                                            @endforeach
+                                                            <p class="rd-no-results" x-show="!hasResults" style="display:none">{{ __('admin.dashboard_no_participants_match') }}</p>
+                                                        </div>
+                                                    </div>
                                                 </div>
+                                            @else
+                                                <div class="rd-all-submitted">
+                                                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                    </svg>
+                                                    All participants have submitted.
+                                                </div>
+                                            @endif
+                                        </div>
+
+                                        {{-- Statistics panel --}}
+                                        <div x-show="tab === 'stats'"
+                                             x-data="formStats({{ $release->id }}, {{ $fi['total'] }})"
+                                             @frs-load-{{ $release->id }}.window="loadStats()">
+                                            <div class="frs-wrap">
+
+                                                {{-- Loading skeleton --}}
+                                                <div x-show="loading" class="frs-loading-row">
+                                                    <div class="frs-skeleton" style="width:55%;height:.625rem"></div>
+                                                    <div class="frs-skeleton" style="width:35%;height:.625rem"></div>
+                                                    <div class="frs-skeleton" style="width:100%;height:3rem;margin-top:.5rem"></div>
+                                                    <div class="frs-skeleton" style="width:100%;height:3rem;margin-top:.375rem"></div>
+                                                </div>
+
+                                                {{-- Error --}}
+                                                <p x-show="error" x-text="error" class="frs-error"></p>
+
+                                                {{-- Summary --}}
+                                                <div x-show="loaded" class="frs-summary">
+                                                    <div class="frs-summary-card">
+                                                        <span class="frs-summary-num" x-text="totalSubmitted + '/{{ $fi['total'] }}'"></span>
+                                                        <span class="frs-summary-lbl">Submitted</span>
+                                                    </div>
+                                                    <div class="frs-summary-card">
+                                                        <span class="frs-summary-num" x-text="completionPct + '%'"></span>
+                                                        <span class="frs-summary-lbl">Completion rate</span>
+                                                    </div>
+                                                    <div class="frs-summary-card">
+                                                        <span class="frs-summary-num" :class="totalUnused > 0 && 'frs-warn'" x-text="totalUnused"></span>
+                                                        <span class="frs-summary-lbl">Unused options total</span>
+                                                    </div>
+                                                </div>
+
+                                                {{-- Per-question sections --}}
+                                                <template x-if="loaded">
+                                                    <div>
+                                                        <template x-for="(stat, idx) in stats" :key="stat.id">
+                                                            <div class="frs-q-section">
+
+                                                                {{-- Header --}}
+                                                                <div class="frs-q-head">
+                                                                    <div class="frs-q-meta">
+                                                                        <span class="frs-q-num" x-text="'Q' + (idx + 1)"></span>
+                                                                        <span class="frs-q-label" x-text="stat.label" :title="stat.label"></span>
+                                                                        <span class="frs-q-type" x-text="stat.type"></span>
+                                                                    </div>
+                                                                    <template x-if="stat.options">
+                                                                        <div class="frs-q-head-right">
+                                                                            <span class="frs-answered" x-text="stat.response_count + ' answered'"></span>
+                                                                            <span x-show="stat.unused_count > 0" class="frs-unused-badge" x-text="'⚠ ' + stat.unused_count + ' unused'"></span>
+                                                                        </div>
+                                                                    </template>
+                                                                    <template x-if="!stat.options">
+                                                                        <span class="frs-answered" x-text="stat.response_count + '/' + totalSubmitted + ' responded'"></span>
+                                                                    </template>
+                                                                </div>
+
+                                                                {{-- Choice question with chart --}}
+                                                                <template x-if="stat.options">
+                                                                    <div x-data="frsChartQuestion(stat)">
+                                                                        {{-- Chart view --}}
+                                                                        <div x-show="!showUnused" class="frs-chart-wrap">
+                                                                            <div :style="'position:relative;height:' + Math.max(80, stat.options.length * 30) + 'px'">
+                                                                                <canvas x-ref="canvas" x-init="build()"></canvas>
+                                                                            </div>
+                                                                            <button x-show="stat.unused_count > 0"
+                                                                                    class="frs-toggle-btn"
+                                                                                    @click="showUnused = true">
+                                                                                ⚠ Show unused only (<span x-text="stat.unused_count"></span>)
+                                                                            </button>
+                                                                        </div>
+                                                                        {{-- Unused-only list --}}
+                                                                        <div x-show="showUnused" class="frs-unused-panel">
+                                                                            <p class="frs-unused-title">Never selected options</p>
+                                                                            <template x-for="opt in stat.options.filter(o => o.unused)" :key="opt.label">
+                                                                                <div class="frs-unused-item">
+                                                                                    <span class="frs-unused-dot"></span>
+                                                                                    <span x-text="opt.label"></span>
+                                                                                </div>
+                                                                            </template>
+                                                                            <button class="frs-toggle-btn" style="margin-top:.625rem" @click="showUnused = false">← Show all options</button>
+                                                                        </div>
+                                                                    </div>
+                                                                </template>
+
+                                                                {{-- Non-choice: count bar --}}
+                                                                <template x-if="!stat.options">
+                                                                    <div class="frs-count-row">
+                                                                        <div class="frs-count-track">
+                                                                            <div class="frs-count-fill"
+                                                                                 :style="'width:' + (totalSubmitted > 0 ? Math.round(stat.response_count / totalSubmitted * 100) : 0) + '%'">
+                                                                            </div>
+                                                                        </div>
+                                                                        <span class="frs-count-lbl"
+                                                                              x-text="stat.response_count + '/' + totalSubmitted + ' responded (' + (totalSubmitted > 0 ? Math.round(stat.response_count / totalSubmitted * 100) : 0) + '%)'">
+                                                                        </span>
+                                                                    </div>
+                                                                </template>
+
+                                                            </div>
+                                                        </template>
+                                                    </div>
+                                                </template>
+
                                             </div>
                                         </div>
-                                    @endif
+
+                                    </div>
 
                                 </div>
                             @endforeach

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminExportController;
+use App\Http\Controllers\FormReleaseStatsController;
 use App\Http\Controllers\PublicReleaseController;
 use Illuminate\Support\Facades\Route;
 
@@ -28,6 +29,8 @@ Route::middleware(['auth'])->group(function () {
         ->name('admin.participant-import-template');
     Route::get('/admin/file/{answer}/{index?}', [AdminExportController::class, 'serveFile'])
         ->name('admin.file.serve');
+    Route::get('/admin/api/release-stats/{release}', [FormReleaseStatsController::class, 'show'])
+        ->name('admin.api.release-stats');
 });
 
 Route::get('/r/file/{answer}/{index?}', [PublicReleaseController::class, 'serveFile'])
