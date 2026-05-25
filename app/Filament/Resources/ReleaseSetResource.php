@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Forms\Components\IconPicker;
 use App\Filament\Resources\ReleaseSetResource\Pages;
 use App\Models\Form;
 use App\Models\ReleaseSet;
@@ -63,6 +64,45 @@ class ReleaseSetResource extends Resource
                         ->label(fn () => __('admin.field_period_label'))
                         ->placeholder('e.g. Q2 2025')
                         ->maxLength(100),
+
+                    Forms\Components\TextInput::make('splash_title')
+                        ->label(fn () => __('admin.field_splash_title'))
+                        ->placeholder(fn () => __('admin.field_splash_title_placeholder'))
+                        ->maxLength(255)
+                        ->columnSpanFull(),
+
+                    Forms\Components\TextInput::make('splash_subtitle')
+                        ->label(fn () => __('admin.field_splash_subtitle'))
+                        ->placeholder(fn () => __('admin.field_splash_subtitle_placeholder'))
+                        ->maxLength(255)
+                        ->columnSpanFull(),
+
+                    Forms\Components\ColorPicker::make('splash_bg_color')
+                        ->label(fn () => __('admin.field_splash_bg_color'))
+                        ->default('#4338ca'),
+
+                    Forms\Components\ColorPicker::make('splash_text_color')
+                        ->label(fn () => __('admin.field_splash_text_color'))
+                        ->default('#ffffff'),
+
+                    Forms\Components\ColorPicker::make('splash_icon_bg_color')
+                        ->label(fn () => __('admin.field_splash_icon_bg_color'))
+                        ->default('#ffffff'),
+
+                    IconPicker::make('splash_icon')
+                        ->label(fn () => __('admin.field_splash_icon'))
+                        ->default('document')
+                        ->columnSpanFull(),
+
+                    Forms\Components\FileUpload::make('splash_icon_path')
+                        ->label(fn () => __('admin.field_splash_icon_upload'))
+                        ->helperText(fn () => __('admin.field_splash_icon_upload_hint'))
+                        ->disk('public')
+                        ->directory('splash-icons')
+                        ->acceptedFileTypes(['image/svg+xml', 'image/png', 'image/jpeg', 'image/webp'])
+                        ->image()
+                        ->nullable()
+                        ->columnSpanFull(),
                 ])
                 ->columns(2),
 

@@ -1,8 +1,131 @@
 <div class="space-y-5">
 
+    {{-- Splash screen --}}
+    <div wire:ignore>
+        @php
+            $splashBg      = $releaseSet->splash_bg_color     ?: '#4338ca';
+            $splashText    = $releaseSet->splash_text_color    ?: '#ffffff';
+            $splashIconBg  = $releaseSet->splash_icon_bg_color ?: null;
+
+            // Parse text colour to RGB for the shimmer gradient
+            $th = ltrim($splashText, '#');
+            if (strlen($th) === 3) {
+                $th = $th[0].$th[0].$th[1].$th[1].$th[2].$th[2];
+            }
+            $tr = hexdec(substr($th, 0, 2));
+            $tg = hexdec(substr($th, 2, 2));
+            $tb = hexdec(substr($th, 4, 2));
+
+            $shimmerGradient = "linear-gradient(90deg,"
+                . "rgba({$tr},{$tg},{$tb},1) 15%,"
+                . "rgba({$tr},{$tg},{$tb},.35) 42%,"
+                . "rgba({$tr},{$tg},{$tb},.75) 50%,"
+                . "rgba({$tr},{$tg},{$tb},.35) 58%,"
+                . "rgba({$tr},{$tg},{$tb},1) 85%)";
+
+            $iconBoxStyle = $splashIconBg
+                ? "background-color:{$splashIconBg};"
+                : "background:rgba(255,255,255,0.15);";
+        @endphp
+        <style>
+            @keyframes sp-float {
+                0%, 100% { transform: translateY(0px); }
+                50%       { transform: translateY(-14px); }
+            }
+            @keyframes sp-ping {
+                0%       { transform: scale(1);   opacity: .45; }
+                80%, 100%{ transform: scale(2.4); opacity: 0;   }
+            }
+            @keyframes sp-shimmer {
+                0%   { background-position: -260% center; }
+                100% { background-position:  260% center; }
+            }
+            @keyframes sp-breathe {
+                0%, 100% { opacity: .55; }
+                50%      { opacity: 1;   }
+            }
+            .sp-float   { animation: sp-float   3.2s ease-in-out infinite; animation-delay: .65s; }
+            .sp-ping    { animation: sp-ping    2.2s cubic-bezier(0,0,.2,1) infinite; animation-delay: .85s; }
+            .sp-breathe { animation: sp-breathe 2.8s ease-in-out infinite; animation-delay: 1s; }
+        </style>
+
+        <div
+            x-data="{ show: true, loaded: false }"
+            x-init="$nextTick(() => { loaded = true; setTimeout(() => show = false, 2800) })"
+            x-show="show"
+            x-transition:leave="transition ease-in-out duration-700"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            style="background-color: {{ $splashBg }}"
+            class="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden select-none"
+        >
+            {{-- Decorative blobs --}}
+            <div class="absolute -top-24 -right-24 w-80 h-80 rounded-full bg-white/10 blur-3xl pointer-events-none"></div>
+            <div class="absolute -bottom-32 -left-20 w-96 h-96 rounded-full bg-white/5 blur-3xl pointer-events-none"></div>
+
+            {{-- Icon: outer div floats, inner div handles scale+opacity entrance --}}
+            <div class="mb-8 sp-float">
+                <div
+                    :class="loaded ? 'opacity-100 scale-100' : 'opacity-0 scale-50'"
+                    class="relative transition-all duration-500 ease-out"
+                    style="transition-delay: 80ms"
+                >
+                    {{-- Expanding ping ring --}}
+                    <div class="absolute inset-0 rounded-2xl bg-white/30 sp-ping"></div>
+                    {{-- Icon box --}}
+                    <div class="relative w-20 h-20 rounded-2xl ring-1 ring-white/25 flex items-center justify-center shadow-2xl"
+                         style="{{ $iconBoxStyle }}">
+                        @if ($releaseSet->splash_icon_path)
+                            <img src="{{ Storage::url($releaseSet->splash_icon_path) }}"
+                                 alt="icon"
+                                 class="w-12 h-12 object-contain drop-shadow-lg" />
+                        @else
+                            <svg class="w-10 h-10 drop-shadow-lg" fill="none" viewBox="0 0 24 24"
+                                 stroke-width="1.6" stroke="currentColor"
+                                 style="color: {{ $splashText }}">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="{{ \App\Support\SplashIcons::path($releaseSet->splash_icon ?? 'document') }}"/>
+                            </svg>
+                        @endif
+                    </div>
+                </div>
+            </div>
+
+            {{-- Title: entrance wrapper + shimmer child --}}
+            <div
+                :class="loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'"
+                class="transition-all duration-500 ease-out"
+                style="transition-delay: 280ms"
+            >
+                <h1 class="text-4xl font-bold tracking-widest uppercase text-center"
+                    style="background: {{ $shimmerGradient }}; background-size: 260% auto; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: sp-shimmer 2.4s linear infinite; animation-delay: .5s;">
+                    {{ $releaseSet->splash_title ?: config('app.name', 'Blangko') }}
+                </h1>
+            </div>
+
+            {{-- Subtitle: entrance wrapper + breathe child --}}
+            <div
+                :class="loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'"
+                class="mt-3 transition-all duration-500 ease-out"
+                style="transition-delay: 460ms"
+            >
+                <p class="sp-breathe text-sm tracking-wide text-center"
+                   style="color: {{ $splashText }}; opacity: 0.65;">
+                    {{ $releaseSet->splash_subtitle ?: __('public.splash_tagline') }}
+                </p>
+            </div>
+
+            {{-- Home indicator --}}
+            <div
+                :class="loaded ? 'opacity-100' : 'opacity-0'"
+                class="absolute bottom-8 w-32 h-1 rounded-full transition-opacity duration-500 ease-out"
+                style="background-color: {{ $splashText }}; opacity: 0.3; transition-delay: 620ms"
+            ></div>
+        </div>
+    </div>
+
     {{-- Header card --}}
     <div class="rounded-2xl bg-white shadow-sm overflow-hidden border border-slate-200/60">
-        <div class="h-2.5 bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-600"></div>
+        <div class="h-2.5 bg-linear-to-r from-indigo-500 via-violet-500 to-purple-600"></div>
         <div class="p-6 sm:p-8">
             <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight tracking-tight">
                 {{ $releaseSet->name }}
@@ -134,7 +257,7 @@
     {{-- Registration step --}}
     @else
         <div class="rounded-2xl bg-white shadow-sm border border-violet-200/60 overflow-hidden">
-            <div class="h-1 bg-gradient-to-r from-violet-400 to-purple-500"></div>
+            <div class="h-1 bg-linear-to-r from-violet-400 to-purple-500"></div>
             <div class="p-6 sm:p-8 space-y-5">
                 <div>
                     <h2 class="text-base font-semibold text-slate-800">{{ __('public.register_title') }}</h2>

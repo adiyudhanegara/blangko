@@ -31,6 +31,10 @@ return [
     'back'                  => 'Kembali',
     'register_continue'     => 'Daftar & Lanjutkan',
 
+    // Splash screen
+    'splash_tagline'  => 'Isi formulir Anda',
+    'submit_as_other' => 'Ganti peserta',
+
     // Forms list
     'your_progress'     => 'Progres keseluruhan Anda',
     'complete'          => 'selesai',

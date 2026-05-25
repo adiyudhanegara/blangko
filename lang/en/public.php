@@ -31,6 +31,10 @@ return [
     'back'                  => 'Back',
     'register_continue'     => 'Register & Continue',
 
+    // Splash screen
+    'splash_tagline'  => 'Fill out your forms',
+    'submit_as_other' => 'Switch person',
+
     // Forms list
     'your_progress'     => 'Your overall progress',
     'complete'          => 'complete',

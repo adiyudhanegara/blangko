@@ -2,7 +2,7 @@
 
     {{-- Release Set Header --}}
     <div class="rounded-2xl bg-white shadow-sm overflow-hidden border border-slate-200/60">
-        <div class="h-2.5 bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-600"></div>
+        <div class="h-2.5 bg-linear-to-r from-indigo-500 via-violet-500 to-purple-600"></div>
         <div class="p-6 sm:p-8">
             <div class="flex items-start justify-between gap-4">
                 <div class="min-w-0">
@@ -38,7 +38,7 @@
                 </div>
                 <div class="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
                     <div
-                        class="h-1.5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-500"
+                        class="h-1.5 rounded-full bg-linear-to-r from-indigo-500 to-violet-500 transition-all duration-500"
                         style="width: {{ $completionStats['percentage'] }}%"
                     ></div>
                 </div>
@@ -51,12 +51,22 @@
         <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
             <span class="text-xs font-bold text-indigo-600">{{ strtoupper(substr($participant->name ?? 'U', 0, 1)) }}</span>
         </div>
-        <div class="min-w-0">
+        <div class="min-w-0 flex-1">
             <p class="text-sm font-medium text-slate-700 truncate">{{ $participant->name }}</p>
             @if ($participant->division)
                 <p class="text-xs text-slate-400 truncate">{{ $participant->division->name }}</p>
             @endif
         </div>
+        <button
+            wire:click="switchParticipant"
+            wire:loading.attr="disabled"
+            class="shrink-0 inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-indigo-600 transition-colors"
+        >
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 3M21 7.5H7.5"/>
+            </svg>
+            {{ __('public.submit_as_other') }}
+        </button>
     </div>
 
     {{-- Forms list --}}

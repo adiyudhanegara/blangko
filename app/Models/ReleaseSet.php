@@ -15,6 +15,8 @@ class ReleaseSet extends Model
 
     protected $fillable = [
         'name', 'description', 'period_label', 'public_token',
+        'splash_title', 'splash_subtitle', 'splash_bg_color', 'splash_text_color', 'splash_icon_bg_color',
+        'splash_icon', 'splash_icon_path',
         'start_at', 'end_at', 'status', 'reminder_schedule', 'created_by',
     ];
 

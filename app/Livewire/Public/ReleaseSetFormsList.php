@@ -11,12 +11,18 @@ use Livewire\Component;
 class ReleaseSetFormsList extends Component
 {
     public ReleaseSet $releaseSet;
-
     public function mount(): void
     {
         if (!session('blangko_participant_id') || session('blangko_release_set_id') != $this->releaseSet->id) {
             $this->redirectRoute('release.show', $this->releaseSet->public_token);
+            return;
         }
+    }
+
+    public function switchParticipant(): void
+    {
+        session()->forget(['blangko_participant_id', 'blangko_release_set_id']);
+        $this->redirectRoute('release.show', $this->releaseSet->public_token);
     }
 
     public function render()
