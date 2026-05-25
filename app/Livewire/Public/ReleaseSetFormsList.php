@@ -62,8 +62,8 @@ class ReleaseSetFormsList extends Component
         });
 
         // Compute participant window state per release (open / coming_soon / form_closed / locked)
-        $releaseWindows = $releases->mapWithKeys(function ($release) use ($set) {
-            $release->setRelation('releaseSet', $set);
+        $releaseWindows = $releases->mapWithKeys(function ($release) {
+            $release->setRelation('releaseSet', $this->releaseSet);
             return [$release->id => $release->participantWindow()];
         });
 
