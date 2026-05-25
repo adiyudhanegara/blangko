@@ -272,6 +272,29 @@ class ReleaseSetResource extends Resource
                         }
                     }),
 
+                Action::make('republish')
+                    ->label(fn () => __('admin.action_republish'))
+                    ->icon('heroicon-o-arrow-path-rounded-square')
+                    ->color('warning')
+                    ->visible(fn (ReleaseSet $record): bool => $record->status === 'open')
+                    ->requiresConfirmation()
+                    ->modalHeading(fn () => __('admin.modal_republish_set_heading'))
+                    ->modalDescription(fn () => __('admin.modal_republish_set_desc'))
+                    ->action(function (ReleaseSet $record): void {
+                        try {
+                            $result = ReleaseSetPublisher::republish($record->fresh(['formReleases']));
+                            Notification::make()
+                                ->title(__('admin.notification_set_republished', [
+                                    'updated' => $result['updated'],
+                                    'skipped' => $result['skipped'],
+                                ]))
+                                ->success()
+                                ->send();
+                        } catch (\Throwable $e) {
+                            Notification::make()->title(__('admin.notification_publish_failed', ['message' => $e->getMessage()]))->danger()->send();
+                        }
+                    }),
+
                 Action::make('close')
                     ->label(fn () => __('admin.action_close'))
                     ->icon('heroicon-o-lock-closed')

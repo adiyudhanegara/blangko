@@ -46,6 +46,34 @@ class ReleaseSetPublisher
     }
 
     /**
+     * Republish an open ReleaseSet: force re-snapshot every FormRelease that has
+     * no submissions yet. FormReleases with existing submissions are skipped to
+     * avoid cascading deletion of answer data.
+     *
+     * Returns ['updated' => int, 'skipped' => int].
+     */
+    public static function republish(ReleaseSet $set): array
+    {
+        if ($set->status !== 'open') {
+            throw new \RuntimeException("Release set #{$set->id} is not in 'open' status.");
+        }
+
+        $updated = 0;
+        $skipped = 0;
+
+        foreach ($set->formReleases as $release) {
+            if ($release->submissions()->exists()) {
+                $skipped++;
+                continue;
+            }
+            static::forceSnapshotRelease($release);
+            $updated++;
+        }
+
+        return ['updated' => $updated, 'skipped' => $skipped];
+    }
+
+    /**
      * Snapshot a single FormRelease (used when a release is added to an already-open set).
      * Idempotent: if questions already exist, only updates published_at without duplicating.
      */
@@ -56,6 +84,23 @@ class ReleaseSetPublisher
             return;
         }
 
+        static::buildSnapshot($release);
+    }
+
+    /**
+     * Force re-snapshot a FormRelease by deleting its existing release questions
+     * (options cascade via DB constraint) and re-creating from the current form.
+     * Only call this when the release has no submissions.
+     */
+    public static function forceSnapshotRelease(FormRelease $release): void
+    {
+        $release->releaseQuestions()->delete();
+
+        static::buildSnapshot($release);
+    }
+
+    private static function buildSnapshot(FormRelease $release): void
+    {
         $questions = $release->form->questions()->with('options')->get();
         $oldToNew  = [];
 

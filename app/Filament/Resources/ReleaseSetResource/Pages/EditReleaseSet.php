@@ -52,6 +52,29 @@ class EditReleaseSet extends EditRecord
                     }
                 }),
 
+            Action::make('republish')
+                ->label(fn () => __('admin.action_republish'))
+                ->icon('heroicon-o-arrow-path-rounded-square')
+                ->color('warning')
+                ->visible(fn () => $this->getRecord()->status === 'open')
+                ->requiresConfirmation()
+                ->modalHeading(fn () => __('admin.modal_republish_set_heading'))
+                ->modalDescription(fn () => __('admin.modal_republish_set_desc'))
+                ->action(function (): void {
+                    try {
+                        $result = ReleaseSetPublisher::republish($this->getRecord()->fresh(['formReleases']));
+                        Notification::make()
+                            ->title(__('admin.notification_set_republished', [
+                                'updated' => $result['updated'],
+                                'skipped' => $result['skipped'],
+                            ]))
+                            ->success()
+                            ->send();
+                    } catch (\Throwable $e) {
+                        Notification::make()->title(__('admin.notification_publish_failed', ['message' => $e->getMessage()]))->danger()->send();
+                    }
+                }),
+
             Action::make('close')
                 ->label(fn () => __('admin.action_close'))
                 ->icon('heroicon-o-lock-closed')
