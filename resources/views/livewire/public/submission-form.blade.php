@@ -1,4 +1,27 @@
-<div class="space-y-5">
+<div
+    class="space-y-5"
+    x-data="{
+        dirty: false,
+        autoSaving: false,
+        autoSaved: false,
+        _savedTimer: null,
+        init() {
+            this.$el.addEventListener('input',  () => { this.dirty = true; this.autoSaved = false; });
+            this.$el.addEventListener('change', () => { this.dirty = true; this.autoSaved = false; });
+            setInterval(() => {
+                if (!this.dirty || this.autoSaving) return;
+                this.dirty = false;
+                this.autoSaving = true;
+                $wire.autoSaveDraft().then(() => {
+                    this.autoSaving = false;
+                    this.autoSaved = true;
+                    clearTimeout(this._savedTimer);
+                    this._savedTimer = setTimeout(() => { this.autoSaved = false; }, 3000);
+                });
+            }, 10000);
+        }
+    }"
+>
 
     {{-- Form header card with colour band --}}
     <div class="rounded-2xl bg-white shadow-sm overflow-hidden border border-slate-200/60">
@@ -266,6 +289,7 @@
                                         <select
                                             id="field-{{ $question->id }}"
                                             wire:model.live="answers.{{ $question->id }}"
+                                            x-on:change="dirty = true; autoSaved = false"
                                             class="block w-full rounded-xl border border-slate-300 bg-white pl-4 pr-10 py-3 text-sm text-slate-900
                                                    shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none appearance-none
                                                    @error("answers.{$question->id}") border-red-400 @enderror"
@@ -460,6 +484,21 @@
     @if (!$submitted)
         <div class="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-sm border-t border-slate-200 shadow-lg">
             <div class="mx-auto max-w-3xl px-4 sm:px-6 py-3 flex items-center gap-3">
+
+                {{-- Auto-save status --}}
+                <span x-cloak x-show="autoSaving" class="flex items-center gap-1 text-xs text-slate-400 shrink-0">
+                    <svg class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    {{ __('public.auto_saving') }}
+                </span>
+                <span x-cloak x-show="!autoSaving && autoSaved" class="flex items-center gap-1 text-xs text-emerald-500 shrink-0">
+                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                    </svg>
+                    {{ __('public.auto_saved') }}
+                </span>
 
                 <button
                     wire:click="saveDraft"

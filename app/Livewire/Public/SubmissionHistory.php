@@ -13,6 +13,7 @@ class SubmissionHistory extends Component
     public FormRelease $release;
 
     public ?int $duplicateFromId = null;
+    public bool $showDraftWarning = false;
 
     public function mount(): void
     {
@@ -37,7 +38,7 @@ class SubmissionHistory extends Component
     {
         return Submission::where('form_release_id', $this->release->id)
             ->where('participant_id', session('blangko_participant_id'))
-            ->with('answers')
+            ->with(['answers.releaseQuestion.options'])
             ->orderBy('created_at', 'desc')
             ->get();
     }
@@ -75,12 +76,49 @@ class SubmissionHistory extends Component
         unset($this->submissions); // bust the computed cache
     }
 
+    #[Computed]
+    public function latestDraft(): ?Submission
+    {
+        return Submission::where('form_release_id', $this->release->id)
+            ->where('participant_id', session('blangko_participant_id'))
+            ->where('status', 'draft')
+            ->latest()
+            ->first();
+    }
+
     public function addNew(): void
     {
-        $token     = $this->release->releaseSet->public_token;
-        $releaseId = $this->release->id;
+        if ($this->latestDraft !== null) {
+            $this->showDraftWarning = true;
+            return;
+        }
 
-        $this->redirectRoute('release.form', [$token, $releaseId]);
+        $this->createNewDraft();
+    }
+
+    public function dismissWarning(): void
+    {
+        $this->showDraftWarning = false;
+    }
+
+    public function forceNewDraft(): void
+    {
+        $this->showDraftWarning = false;
+        $this->createNewDraft();
+    }
+
+    private function createNewDraft(): void
+    {
+        $submission = Submission::create([
+            'form_release_id' => $this->release->id,
+            'participant_id'  => session('blangko_participant_id'),
+            'status'          => 'draft',
+            'ip_address'      => request()->ip(),
+            'user_agent'      => request()->userAgent(),
+        ]);
+
+        $token = $this->release->releaseSet->public_token;
+        $this->redirectRoute('release.submission.edit', [$token, $this->release->id, $submission->id]);
     }
 
     public function duplicateFrom(int $submissionId): void

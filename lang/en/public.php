@@ -63,6 +63,8 @@ return [
     'submit_form'        => 'Submit Form',
     'submitting'         => 'Submitting…',
     'draft_saved'        => 'Draft saved.',
+    'auto_saving'        => 'Auto-saving…',
+    'auto_saved'         => 'Auto-saved',
     'submitted_success'  => 'Form submitted successfully!',
     'please_specify'     => 'Please specify…',
     'upload_failed'      => 'Upload failed. Please try again.',
@@ -78,8 +80,12 @@ return [
     'other_required' => ':field: please specify the "Other" value.',
 
     // History
-    'add_new_submission'   => 'Add New Submission',
-    'no_submissions'       => 'No submissions yet',
+    'add_new_submission'      => 'Add New Submission',
+    'draft_warning_title'     => 'You have an unfinished draft',
+    'draft_warning_desc'      => 'Please complete or delete your existing draft before adding a new submission.',
+    'continue_latest_draft'   => 'Continue Draft',
+    'create_new_anyway'       => 'Create New Anyway',
+    'no_submissions'          => 'No submissions yet',
     'no_submissions_desc'  => 'Create your first submission to get started.',
     'create_first'         => 'Create First Submission',
     'draft'                => 'Draft',

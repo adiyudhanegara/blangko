@@ -124,6 +124,15 @@ class SubmissionForm extends Component
         session()->flash('message', __('public.draft_saved'));
     }
 
+    public function autoSaveDraft(): void
+    {
+        if ($this->submitted) {
+            return;
+        }
+        $this->saveAnswers();
+        $this->submission->update(['last_edited_at' => now()]);
+    }
+
     public function submit(): void
     {
         $this->validateAnswers();

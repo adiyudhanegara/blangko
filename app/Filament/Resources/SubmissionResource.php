@@ -5,6 +5,9 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\SubmissionResource\Pages;
 use App\Models\Submission;
 use Filament\Actions\Action;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables;
@@ -117,6 +120,12 @@ class SubmissionResource extends Resource
                     ->icon('heroicon-o-eye')
                     ->color('gray')
                     ->url(fn (Submission $record): string => Pages\ViewSubmission::getUrl(['record' => $record->id])),
+                DeleteAction::make(),
+            ])
+            ->bulkActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                ]),
             ]);
     }
 

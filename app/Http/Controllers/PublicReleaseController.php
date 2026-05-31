@@ -83,7 +83,20 @@ class PublicReleaseController extends Controller
         }
 
         if ($release->allowsMultipleSubmissions()) {
-            // Multi-submission: create a fresh draft and redirect to its edit URL
+            $drafts = Submission::where('form_release_id', $release->id)
+                ->where('participant_id', $participantId)
+                ->where('status', 'draft')
+                ->latest()
+                ->get();
+
+            if ($drafts->count() > 1) {
+                return redirect()->route('release.history', [$token, $release->id]);
+            }
+
+            if ($drafts->count() === 1) {
+                return redirect()->route('release.submission.edit', [$token, $release->id, $drafts->first()->id]);
+            }
+
             $submission = Submission::create([
                 'form_release_id' => $release->id,
                 'participant_id'  => $participantId,

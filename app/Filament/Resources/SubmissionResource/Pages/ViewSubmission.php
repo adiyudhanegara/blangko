@@ -4,6 +4,7 @@ namespace App\Filament\Resources\SubmissionResource\Pages;
 
 use App\Filament\Resources\SubmissionResource;
 use Filament\Actions\Action;
+use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\ViewRecord;
 use Livewire\Attributes\Computed;
 
@@ -43,6 +44,9 @@ class ViewSubmission extends ViewRecord
                 ->color('gray')
                 ->url(fn (): string => route('admin.releases.export', $this->getRecord()->form_release_id))
                 ->openUrlInNewTab(),
+
+            DeleteAction::make()
+                ->successRedirectUrl(SubmissionResource::getUrl()),
 
             Action::make('back')
                 ->label(fn () => __('admin.action_all_submissions'))

@@ -63,6 +63,8 @@ return [
     'submit_form'        => 'Kirim Formulir',
     'submitting'         => 'Mengirim…',
     'draft_saved'        => 'Draft disimpan.',
+    'auto_saving'        => 'Menyimpan otomatis…',
+    'auto_saved'         => 'Tersimpan otomatis',
     'submitted_success'  => 'Formulir berhasil dikumpulkan!',
     'please_specify'     => 'Mohon sebutkan…',
     'upload_failed'      => 'Unggahan gagal. Silakan coba lagi.',
@@ -78,8 +80,12 @@ return [
     'other_required' => ':field: mohon sebutkan nilai "Lainnya".',
 
     // History
-    'add_new_submission'   => 'Tambah Pengisian Baru',
-    'no_submissions'       => 'Belum ada pengisian',
+    'add_new_submission'      => 'Tambah Pengisian Baru',
+    'draft_warning_title'     => 'Anda memiliki draft yang belum selesai',
+    'draft_warning_desc'      => 'Harap selesaikan atau hapus draft Anda sebelum menambahkan pengisian baru.',
+    'continue_latest_draft'   => 'Lanjutkan Draft',
+    'create_new_anyway'       => 'Buat Baru',
+    'no_submissions'          => 'Belum ada pengisian',
     'no_submissions_desc'  => 'Buat pengisian pertama Anda untuk memulai.',
     'create_first'         => 'Buat Pengisian Pertama',
     'draft'                => 'Draft',

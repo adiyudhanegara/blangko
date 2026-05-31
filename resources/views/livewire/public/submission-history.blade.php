@@ -35,16 +35,69 @@
         </div>
     </div>
 
+    {{-- Draft warning banner --}}
+    @if ($showDraftWarning)
+        <div class="rounded-xl bg-amber-50 border border-amber-200 p-4">
+            <div class="flex items-start gap-3">
+                <svg class="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+                </svg>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-amber-800">{{ __('public.draft_warning_title') }}</p>
+                    <p class="text-xs text-amber-700 mt-0.5">{{ __('public.draft_warning_desc') }}</p>
+                    <div class="mt-3 flex flex-wrap gap-2">
+                        @if ($this->latestDraft)
+                            <a href="{{ route('release.submission.edit', [$release->releaseSet->public_token, $release->id, $this->latestDraft->id]) }}"
+                               class="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold px-3.5 py-2 transition-colors">
+                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/>
+                                </svg>
+                                {{ __('public.continue_latest_draft') }}
+                            </a>
+                        @endif
+                        <button
+                            wire:click="forceNewDraft"
+                            wire:loading.attr="disabled"
+                            wire:target="forceNewDraft"
+                            type="button"
+                            class="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-white hover:bg-amber-50 text-amber-700 text-xs font-medium px-3.5 py-2 transition-colors disabled:opacity-60"
+                        >
+                            {{ __('public.create_new_anyway') }}
+                        </button>
+                        <button
+                            wire:click="dismissWarning"
+                            type="button"
+                            class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 text-xs font-medium px-3.5 py-2 transition-colors"
+                        >
+                            {{ __('public.back') }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
     {{-- Add new button --}}
     <div class="flex justify-end">
         <button
             wire:click="addNew"
-            class="inline-flex items-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold px-4 py-2.5 text-sm transition-colors"
+            wire:loading.attr="disabled"
+            wire:target="addNew,forceNewDraft"
+            class="inline-flex items-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold px-4 py-2.5 text-sm transition-colors disabled:opacity-60"
         >
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
-            </svg>
-            {{ __('public.add_new_submission') }}
+            <span wire:loading.remove wire:target="addNew,forceNewDraft" class="flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                </svg>
+                {{ __('public.add_new_submission') }}
+            </span>
+            <span wire:loading wire:target="addNew,forceNewDraft" class="flex items-center gap-2">
+                <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                </svg>
+                {{ __('public.saving') }}
+            </span>
         </button>
     </div>
 

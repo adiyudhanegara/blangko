@@ -41,32 +41,51 @@ class Answer extends Model
             ));
         }
 
+        // Resolve a stored option value to its human-readable label when options are loaded.
+        $resolveLabel = function (string $val): string {
+            if ($this->relationLoaded('releaseQuestion')
+                && $this->releaseQuestion?->relationLoaded('options')
+            ) {
+                $match = $this->releaseQuestion->options->firstWhere('value', $val);
+                if ($match) {
+                    return $match->label;
+                }
+            }
+            return $val;
+        };
+
         /** @var array<mixed>|null $json */
         $json = $this->value_json;
 
         if ($json === null) {
             /** @var string|null $raw */
             $raw = $this->value;
-            return (string) ($raw ?? '');
+            return $raw !== null ? $resolveLabel((string) $raw) : '';
         }
 
         // Radio/select with "Other": {"option": "other", "other_text": "..."}
         if (isset($json['option'])) {
             return $json['option'] === 'other'
                 ? (string) ($json['other_text'] ?? '')
-                : (string) ($json['option'] ?? '');
+                : $resolveLabel((string) ($json['option'] ?? ''));
         }
 
         // Checkbox with optional "Other": {"values": [...], "other_text": "..."}
         if (isset($json['values'])) {
-            $values = array_filter((array) $json['values'], fn($v) => $v !== 'other');
-            if (isset($json['other_text']) && $json['other_text'] !== '') {
-                $values[] = $json['other_text'];
+            $labels = [];
+            foreach ((array) $json['values'] as $v) {
+                if ($v === 'other') {
+                    continue;
+                }
+                $labels[] = $resolveLabel((string) $v);
             }
-            return implode('; ', $values);
+            if (isset($json['other_text']) && $json['other_text'] !== '') {
+                $labels[] = (string) $json['other_text'];
+            }
+            return implode('; ', $labels);
         }
 
         // Plain array (legacy checkbox without Other support)
-        return implode('; ', $json);
+        return implode('; ', array_map(fn($v) => $resolveLabel((string) $v), (array) $json));
     }
 }
